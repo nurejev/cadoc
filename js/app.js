@@ -1,5 +1,5 @@
 // ======================================================================
-// App wiring.
+// App wiring. One main screen with three views: Cards (default) · List · Matrix.
 // ======================================================================
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -7,8 +7,8 @@
   let tenantName = "";
   let tenantLogo = null;      // tenant branding logo (data URL) for neutral exports
   let selected = new Set();
-  let stateFilter = "all", query = "", docView = "cards", fmt = "png";
-  let currentDoc = [];        // ids in the doc preview
+  let stateFilter = "all", query = "", viewMode = "cards", fmt = "png";
+  let currentExport = [];
 
   // ---------- helpers ----------
   function show(id) {
@@ -20,52 +20,58 @@
     const t = $("toast"); t.innerHTML = msg; t.classList.add("show");
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3200);
   }
+  function visible() {
+    return policies.filter(p => (stateFilter === "all" || p.state === stateFilter)
+      && (!query || p.name.toLowerCase().includes(query)));
+  }
 
-  // ---------- list ----------
-  function refreshList() {
+  // ---------- views ----------
+  function refreshViews() {
+    const vis = visible();
     $("stateChips").innerHTML = Render.stateChips(policies, stateFilter);
+    $("cardsView").innerHTML = vis.map(p => Render.summaryCard(p, selected)).join("")
+      || '<p class="mini" style="padding:20px">No policies match the current filter.</p>';
     document.querySelector("#ptable tbody").innerHTML = Render.listRows(policies, selected, stateFilter, query);
+    $("mtable").innerHTML = Render.matrix(vis.length ? vis : policies);
+    setView(viewMode);
     updateSelbar();
+  }
+  function setView(v) {
+    viewMode = v;
+    $("cardsView").style.display = v === "cards" ? "grid" : "none";
+    $("listView").style.display = v === "list" ? "block" : "none";
+    $("matrixView").style.display = v === "matrix" ? "block" : "none";
+    ["viewCards", "viewList", "viewMatrix"].forEach(id => $(id).classList.remove("active"));
+    $(v === "cards" ? "viewCards" : v === "list" ? "viewList" : "viewMatrix").classList.add("active");
   }
   function updateSelbar() {
     const n = selected.size;
     $("selCount").textContent = n;
     $("selbar").classList.toggle("visible", n > 0);
-    $("exportBtn").disabled = n === 0;
+    $("exportBtn").disabled = policies.length === 0;
     $("selHint").textContent = n <= 1
-      ? "Select one policy for PNG, multiple for a combined PDF"
+      ? "One policy exports as PNG, multiple as a combined PDF"
       : "Multiple selected — will export as a combined PDF";
   }
-
-  // ---------- doc preview ----------
-  function openDoc(ids) {
-    currentDoc = ids;
-    const ps = ids.map(id => policies.find(p => p.id === id));
-    $("cardsView").innerHTML = ps.map(p => Render.summaryCard(p, selected)).join("");
-    $("mtable").innerHTML = Render.matrix(ps);
-    $("docCount").textContent = `· ${ps.length} ${ps.length === 1 ? "policy" : "policies"}`;
-    setDocView(docView);
-    show("screen-doc");
-  }
-  function setDocView(v) {
-    docView = v;
-    $("cardsView").style.display = v === "cards" ? "grid" : "none";
-    $("matrixView").style.display = v === "matrix" ? "block" : "none";
-    $("segCards").classList.toggle("active", v === "cards");
-    $("segMatrix").classList.toggle("active", v === "matrix");
+  function showDetail(id) {
+    const p = policies.find(x => x.id === id); if (!p) return;
+    $("detailBody").innerHTML = Render.card(p, tenantName);
+    $("detailModal").classList.add("open");
   }
 
   // ---------- export ----------
-  function openExport(ids) {
-    currentExport = ids;
-    fmt = ids.length > 1 ? "pdf" : "png";
+  function openExport() {
+    currentExport = selected.size ? [...selected] : visible().map(p => p.id);
+    if (!currentExport.length) return;
+    fmt = currentExport.length > 1 ? "pdf" : "png";
     syncFmt();
-    $("expDesc").textContent = ids.length > 1
-      ? `${ids.length} policies selected — recommended export is a single combined PDF.`
-      : "1 policy selected — recommended export is a PNG image.";
+    $("expDesc").textContent = selected.size
+      ? (currentExport.length > 1
+        ? `${currentExport.length} policies selected — recommended export is a single combined PDF.`
+        : "1 policy selected — recommended export is a PNG image.")
+      : `No selection — exporting all ${currentExport.length} policies in the current view as a combined PDF.`;
     $("exportModal").classList.add("open");
   }
-  let currentExport = [];
   function syncFmt() {
     $("expOptPng").classList.toggle("sel", fmt === "png");
     $("expOptPdf").classList.toggle("sel", fmt === "pdf");
@@ -104,7 +110,7 @@
       $("avatar").textContent = (account?.name || account?.username || "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
       $("tenantBox").style.display = "flex";
       selected = new Set();
-      refreshList();
+      refreshViews();
       show("screen-list");
       toast(`Signed in to <span>${tenantName}</span> — ${policies.length} Conditional Access policies loaded`);
     } catch (e) {
@@ -123,7 +129,7 @@
     $("tenantUser").textContent = "demo@contoso.onmicrosoft.com";
     $("avatar").textContent = "DM";
     $("tenantBox").style.display = "flex";
-    refreshList();
+    refreshViews();
     show("screen-list");
     toast(`Demo mode — <span>${policies.length}</span> sample policies loaded`);
   }
@@ -144,56 +150,47 @@
     show("screen-login");
   });
 
-  $("searchBox").addEventListener("input", (e) => { query = e.target.value.toLowerCase(); refreshList(); });
+  $("searchBox").addEventListener("input", (e) => { query = e.target.value.toLowerCase(); refreshViews(); });
   $("stateChips").addEventListener("click", (e) => {
     const b = e.target.closest("[data-state]"); if (!b) return;
-    stateFilter = b.dataset.state; refreshList();
+    stateFilter = b.dataset.state; refreshViews();
   });
+  $("viewCards").addEventListener("click", () => setView("cards"));
+  $("viewList").addEventListener("click", () => setView("list"));
+  $("viewMatrix").addEventListener("click", () => setView("matrix"));
+  $("clearSelBtn").addEventListener("click", () => { selected.clear(); refreshViews(); $("selAll").checked = false; });
+
+  // list view: name opens detail, checkbox selects
   document.querySelector("#ptable tbody").addEventListener("click", (e) => {
     const open = e.target.closest("[data-open]");
-    if (open) { openDoc([open.dataset.open]); return; }
+    if (open) showDetail(open.dataset.open);
   });
   document.querySelector("#ptable tbody").addEventListener("change", (e) => {
     const cb = e.target.closest("[data-sel]"); if (!cb) return;
     cb.checked ? selected.add(cb.dataset.sel) : selected.delete(cb.dataset.sel);
-    updateSelbar();
+    refreshViews();
   });
   $("selAll").addEventListener("change", (e) => {
     document.querySelectorAll("#ptable tbody [data-sel]").forEach(cb => {
       cb.checked = e.target.checked;
       e.target.checked ? selected.add(cb.dataset.sel) : selected.delete(cb.dataset.sel);
     });
-    updateSelbar();
+    refreshViews();
   });
-  $("clearSelBtn").addEventListener("click", () => { selected.clear(); refreshList(); $("selAll").checked = false; });
-  $("docSelBtn").addEventListener("click", () => openDoc([...selected]));
-  $("docAllBtn").addEventListener("click", () => openDoc(policies.map(p => p.id)));
-  // Cards/Matrix toggle on the list screen: opens the doc view (selection, or all)
-  $("segCardsList").addEventListener("click", () => { docView = "cards"; openDoc(selected.size ? [...selected] : policies.map(p => p.id)); });
-  $("segMatrixList").addEventListener("click", () => { docView = "matrix"; openDoc(selected.size ? [...selected] : policies.map(p => p.id)); });
-  $("backBtn").addEventListener("click", () => show("screen-list"));
-  $("segCards").addEventListener("click", () => setDocView("cards"));
-  $("segMatrix").addEventListener("click", () => setDocView("matrix"));
 
-  $("exportBtn").addEventListener("click", () => openExport([...selected]));
-  $("exportBtn2").addEventListener("click", () => openExport(currentDoc));
-  $("expOptPng").addEventListener("click", () => { fmt = "png"; syncFmt(); });
-  $("expOptPdf").addEventListener("click", () => { fmt = "pdf"; syncFmt(); });
-  $("expCancel").addEventListener("click", () => $("exportModal").classList.remove("open"));
-  $("expGo").addEventListener("click", doExport);
-  // summary card: checkbox = select, click elsewhere = open detail modal
+  // cards view: checkbox selects, click elsewhere opens detail modal
   $("cardsView").addEventListener("click", (e) => {
     if (e.target.matches("[data-sel]")) return; // handled by change event
     const sc = e.target.closest("[data-open]"); if (!sc) return;
-    const p = policies.find(x => x.id === sc.dataset.open);
-    $("detailBody").innerHTML = Render.card(p, tenantName);
-    $("detailModal").classList.add("open");
+    showDetail(sc.dataset.open);
   });
   $("cardsView").addEventListener("change", (e) => {
     const cb = e.target.closest("[data-sel]"); if (!cb) return;
     cb.checked ? selected.add(cb.dataset.sel) : selected.delete(cb.dataset.sel);
-    refreshList(); // keep list checkboxes + selbar in sync
+    refreshViews();
   });
+
+  // detail modal: backdrop closes, Save PNG exports
   $("detailModal").addEventListener("click", (e) => {
     if (e.target.id === "detailModal") { $("detailModal").classList.remove("open"); return; }
     const b = e.target.closest("[data-png]"); if (!b) return;
@@ -201,6 +198,13 @@
     toast(`Exporting <span>${p.seq}.png</span>…`);
     Exporter.policyPng(p, tenantName, tenantLogo).catch(err => { console.error(err); toast("Export failed"); });
   });
+
+  // export modal
+  $("exportBtn").addEventListener("click", openExport);
+  $("expOptPng").addEventListener("click", () => { fmt = "png"; syncFmt(); });
+  $("expOptPdf").addEventListener("click", () => { fmt = "pdf"; syncFmt(); });
+  $("expCancel").addEventListener("click", () => $("exportModal").classList.remove("open"));
+  $("expGo").addEventListener("click", doExport);
 
   // ---------- boot ----------
   Graph.init().then(() => {

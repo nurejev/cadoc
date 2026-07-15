@@ -54,7 +54,7 @@
     </div>
   </section>
 
-  <!-- ============ POLICY LIST ============ -->
+  <!-- ============ POLICIES (cards default · list · matrix) ============ -->
   <section id="screen-list" class="screen">
     <div class="toolbar">
       <div class="search">
@@ -63,10 +63,10 @@
       </div>
       <div class="chip-filter" id="stateChips"></div>
       <div class="seg">
-        <button id="segCardsList">Cards</button>
-        <button id="segMatrixList">Matrix</button>
+        <button class="active" id="viewCards">Cards</button>
+        <button id="viewList">List</button>
+        <button id="viewMatrix">Matrix</button>
       </div>
-      <button class="btn" id="docAllBtn">Document all</button>
       <button class="btn lemon" id="exportBtn" disabled>Export</button>
     </div>
 
@@ -74,11 +74,12 @@
       <span><b id="selCount">0</b> policies selected</span>
       <span class="mini selhint" id="selHint"></span>
       <div class="spacer"></div>
-      <button class="btn ghost" id="docSelBtn">Document selection</button>
       <button class="btn ghost" id="clearSelBtn">Clear</button>
     </div>
 
-    <div class="list-card">
+    <div class="cards" id="cardsView"></div>
+
+    <div class="list-card" id="listView" style="display:none">
       <table class="plist" id="ptable">
         <thead><tr>
           <th style="width:36px"><input type="checkbox" id="selAll"></th>
@@ -87,20 +88,7 @@
         <tbody></tbody>
       </table>
     </div>
-  </section>
 
-  <!-- ============ DOCUMENTATION ============ -->
-  <section id="screen-doc" class="screen">
-    <button class="back" id="backBtn">← Back to policy list</button>
-    <div class="toolbar">
-      <h2 style="font-size:19px;letter-spacing:-.02em;flex:1">Documentation preview <span class="mini muted" id="docCount"></span></h2>
-      <div class="seg">
-        <button class="active" id="segCards">Cards</button>
-        <button id="segMatrix">Matrix</button>
-      </div>
-      <button class="btn lemon" id="exportBtn2">Export</button>
-    </div>
-    <div class="cards" id="cardsView"></div>
     <div class="matrix-wrap" id="matrixView" style="display:none">
       <table class="matrix" id="mtable"></table>
     </div>

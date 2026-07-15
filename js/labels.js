@@ -53,6 +53,7 @@ const LABELS = {
     approvedApplication: "Require approved client app",
     compliantApplication: "Require app protection policy",
     passwordChange: "Require password change",
+    riskRemediation: "Require risk remediation",
   },
 
   servicePrincipals: { ServicePrincipalsInMyTenant: "All owned service principals" },

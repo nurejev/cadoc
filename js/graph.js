@@ -86,6 +86,9 @@ const Graph = (() => {
 
     try { (await ggetAll("/policies/authenticationStrengthPolicies")).forEach(s => names[s.id] = s.displayName); } catch {}
 
+    // terms of use names (needs Agreement.Read.All; shown as GUID if not granted)
+    try { (await ggetAll("/identityGovernance/termsOfUse/agreements")).forEach(a => names[a.id] = a.displayName); } catch {}
+
     // collect user/group/app/service-principal GUIDs from all policies
     const dirIds = new Set(), appIds = new Set();
     for (const p of policies) {
