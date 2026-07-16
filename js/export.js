@@ -22,6 +22,15 @@ const Exporter = (() => {
     return htmlToImage.toPng(node, opts);
   }
 
+  // For PDF pages: JPEG at lower pixel ratio — many pages of full-res PNG can
+  // exceed the JS string limit ("Invalid string length") when jsPDF assembles
+  // the document. JPEG keeps each page ~5-10x smaller at equal readability.
+  async function nodeToJpeg(node) {
+    const opts = { pixelRatio: 1.5, backgroundColor: "#ffffff", skipFonts: true, quality: 0.9 };
+    await htmlToImage.toJpeg(node, opts);
+    return htmlToImage.toJpeg(node, opts);
+  }
+
   function download(dataUrl, filename) {
     const a = document.createElement("a");
     a.href = dataUrl; a.download = filename; a.click();
@@ -71,13 +80,14 @@ const Exporter = (() => {
 
   async function addImagePaged(pdf, node) {
     // renders node and adds it, slicing vertically over multiple pages if needed
-    const url = await nodeToPng(node);
+    const url = await nodeToJpeg(node);
     const img = await loadImg(url);
+    if (!img.width || !img.height) throw new Error("rendered image is empty");
     const availW = A4.w - MARGIN * 2, availH = A4.h - MARGIN * 2;
     const scale = availW / img.width;
     const totalH = img.height * scale;
     if (totalH <= availH) {
-      pdf.addImage(url, "PNG", MARGIN, MARGIN, availW, totalH);
+      pdf.addImage(url, "JPEG", MARGIN, MARGIN, availW, totalH);
       return;
     }
     // slice
@@ -87,18 +97,18 @@ const Exporter = (() => {
     const ctx = canvas.getContext("2d");
     let y = 0, first = true;
     while (y < img.height) {
-      const h = Math.min(sliceHpx, img.height - y);
+      const h = Math.ceil(Math.min(sliceHpx, img.height - y));
       canvas.height = h;
       ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, h);
       ctx.drawImage(img, 0, y, img.width, h, 0, 0, img.width, h);
       if (!first) pdf.addPage();
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", MARGIN, MARGIN, availW, h * scale);
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.9), "JPEG", MARGIN, MARGIN, availW, h * scale);
       y += h; first = false;
     }
   }
 
   async function policiesPdf(policies, tenantName, includeMatrix, onProgress, logo) {
-    const pdf = new jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pdf = new jspdf.jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
     await addCover(pdf, tenantName, policies.length, logo);
 
     const failed = [];
