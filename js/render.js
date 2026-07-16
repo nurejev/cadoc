@@ -4,7 +4,17 @@
 const Render = (() => {
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   const stateChip = (s) => `<span class="state ${s}">${LABELS.stateText[s]}</span>`;
-  const li = (items, cls) => items.map(i => `<li${cls ? ` class="${cls}"` : ""}>${cls === "excl" ? "− " : ""}${esc(i)}</li>`).join("");
+  // Long lists (e.g. a policy targeting ~100 roles) flow inline instead of one
+  // item per line, so an exported card still fits on a single page.
+  const FLOW_AT = 10;
+  const li = (items, cls) => {
+    if (!items.length) return "";
+    if (items.length > FLOW_AT) {
+      const txt = items.map(x => (cls === "excl" ? "− " : "") + esc(x)).join(" · ");
+      return `<li class="mini">${items.length} entries:</li><li class="flow${cls ? " " + cls : ""}">${txt}</li>`;
+    }
+    return items.map(i => `<li${cls ? ` class="${cls}"` : ""}>${cls === "excl" ? "− " : ""}${esc(i)}</li>`).join("");
+  };
 
   function listRows(policies, selected, stateFilter, query) {
     return policies
@@ -119,8 +129,8 @@ const Render = (() => {
         ${stateChip(p.state)}
       </div>
       <div class="pcard-grid">
-        <div class="sect"><h4>👤 Users</h4><ul>${li(p.users.inc)}${li(p.users.exc, "excl")}</ul></div>
-        <div class="sect"><h4>📦 Target resources</h4><ul>${li(p.apps.inc)}${li(p.apps.exc, "excl")}
+        <div class="sect${p.users.inc.length + p.users.exc.length > FLOW_AT ? " wide" : ""}"><h4>👤 Users</h4><ul>${li(p.users.inc)}${li(p.users.exc, "excl")}</ul></div>
+        <div class="sect${p.apps.inc.length + p.apps.exc.length > FLOW_AT ? " wide" : ""}"><h4>📦 Target resources</h4><ul>${li(p.apps.inc)}${li(p.apps.exc, "excl")}
           ${p.apps.filter ? `<li><b>App filter (${p.apps.filter.mode}):</b> <code>${esc(p.apps.filter.rule)}</code></li>` : ""}</ul></div>
         <div class="sect"><h4>🌐 Network</h4><ul>${li(p.net.inc)}${li(p.net.exc, "excl")}</ul></div>
         <div class="sect"><h4>⚙️ Conditions</h4><ul>

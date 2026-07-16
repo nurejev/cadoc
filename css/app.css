@@ -113,10 +113,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--green)}
 .pcard-grid{display:grid;grid-template-columns:repeat(3,1fr)}
 .sect{padding:16px 20px;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
 .sect:nth-child(3n){border-right:0}
+.sect.wide{grid-column:1/-1;border-right:0}
 .sect h4{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--accent2);margin-bottom:9px}
 .sect ul{list-style:none}
 .sect li{padding:3px 0;font-size:13px;line-height:1.45;overflow-wrap:anywhere}
 .sect li.excl{color:var(--off)}
+.sect li.flow{font-size:12px;line-height:1.6;color:var(--ink)}
+.sect li.flow.excl{color:var(--off)}
 .sect li.na{color:#b9ccbe;font-style:italic}
 .sect code{background:var(--soft);padding:1px 5px;border-radius:5px;font-size:11px}
 .tag{display:inline-block;background:var(--soft);border:1px solid var(--border);border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;color:var(--green);margin:1px 2px 1px 0}
