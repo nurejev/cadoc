@@ -291,6 +291,11 @@
       $("anMBody").innerHTML = m.body;
       $("anMPage").textContent = `Page ${m.page + 1} / ${m.pages}`;
     }
+    // export button reflects the current filter scope
+    const n = Analyzer.filterRows(anReport, anFilter, anQuery, groupMemberSet()).length;
+    $("anExport").textContent = n === anReport.length
+      ? "Export HTML report"
+      : `Export HTML report (${n} of ${anReport.length} users)`;
     $("anResults").style.display = "block";
   }
 
@@ -345,13 +350,22 @@
 
   $("anExport").addEventListener("click", () => {
     if (!anReport) return;
+    // export exactly what is currently filtered (cards filter + search + group)
+    const rowsIdx = Analyzer.filterRows(anReport, anFilter, anQuery, groupMemberSet());
+    if (!rowsIdx.length) { toast("Nothing to export — current filter matches <span>0 users</span>"); return; }
+    const subset = rowsIdx.map(i => anReport[i]);
+    const filterBits = [];
+    if (anGroupSel !== "") filterBits.push("group: " + (anGroups[+anGroupSel]?.label || ""));
+    if (anFilter !== "all") filterBits.push({ risky: "risky bypasses only", nomfa: "no MFA from CA", noenforce: "no enforcing policy" }[anFilter]);
+    if (anQuery) filterBits.push(`search: "${anQuery}"`);
     const meta = {
       tenant: tenantName || "tenant",
       date: new Date().toISOString().slice(0, 10),
-      policies: new Set(anReport.flatMap(r => [...r.applied.map(a => a.policy), ...r.bypassing.map(b => b.policy)])).size,
-      scope: `${$("anScope").value} users${$("anReportOnly").checked ? ", incl. report-only" : ""}`,
+      policies: anPols.length,
+      scope: `${$("anScope").value} users${$("anReportOnly").checked ? ", incl. report-only" : ""}`
+        + (filterBits.length ? ` | filtered: ${filterBits.join(", ")} (${subset.length} of ${anReport.length} users)` : ""),
     };
-    const html = Analyzer.exportHtml(meta, anReport, anPols, anGroups);
+    const html = Analyzer.exportHtml(meta, subset, anPols, anGroups);
     const blob = new Blob([html], { type: "text/html" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
