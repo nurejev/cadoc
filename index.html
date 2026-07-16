@@ -72,6 +72,7 @@
         <button id="viewList">List</button>
         <button id="viewMatrix">Matrix</button>
       </div>
+      <button class="btn primary" id="analyzeBtn" disabled>Analyze</button>
       <button class="btn lemon" id="exportBtn" disabled>Export</button>
     </div>
 
@@ -96,6 +97,43 @@
 
     <div class="matrix-wrap" id="matrixView" style="display:none">
       <table class="matrix" id="mtable"></table>
+    </div>
+
+    <!-- Impact analysis (users × policies) — computed only when Analyze is clicked -->
+    <div id="analyzeView" style="display:none">
+      <div class="list-card" id="anIntro" style="padding:26px">
+        <h3 style="margin-bottom:6px">Conditional Access impact analysis</h3>
+        <p class="mini" style="max-width:640px;line-height:1.5;margin-bottom:16px">
+          Builds a users × policies matrix: which policies apply to each user, who bypasses
+          a policy via exclusions (and why), whether a bypass is covered by another policy
+          with the same control and equal-or-wider conditions, and who gets no MFA from any
+          CA policy. Fetches all users and expands every group/role referenced by your
+          policies — on large tenants this can take a few minutes.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <select id="anScope" class="btn" style="cursor:pointer">
+            <option value="all">All users</option>
+            <option value="member">Members only</option>
+            <option value="guest">Guests only</option>
+          </select>
+          <label class="chk" style="margin:0"><input type="checkbox" id="anReportOnly"> Include report-only policies</label>
+          <button class="btn primary" id="anRun">Run analysis</button>
+          <span class="mini" id="anStatus"></span>
+        </div>
+      </div>
+      <div id="anResults" style="display:none">
+        <div class="an-cards" id="anCards"></div>
+        <div class="toolbar" style="margin-top:14px">
+          <div class="search"><input id="anSearch" placeholder="Search user or UPN…"></div>
+          <button class="btn lemon" id="anExport">Export HTML report</button>
+        </div>
+        <div class="list-card">
+          <table class="plist an-table">
+            <thead><tr><th>User</th><th class="num">Applied</th><th class="num">Enforced</th><th class="num">Bypassing</th><th class="num">Risky</th><th>MFA via CA</th></tr></thead>
+            <tbody id="anBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </section>
 </main>
@@ -145,6 +183,7 @@
 <script src="js/graph.js"></script>
 <script src="js/model.js"></script>
 <script src="js/render.js"></script>
+<script src="js/analyze.js"></script>
 <script src="js/export.js"></script>
 <script src="js/demo.js"></script>
 <script src="js/app.js"></script>

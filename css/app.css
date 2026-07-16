@@ -125,6 +125,35 @@ table.matrix tbody th{background:var(--soft);font-size:11px;text-transform:upper
 table.matrix td .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .clip-btn{border:0;background:var(--soft);color:var(--accent2);font-weight:600;font-size:11px;padding:2px 8px;border-radius:999px;margin-top:4px;cursor:pointer}
 .clip-btn:hover{background:#dbe7de}
+
+/* ---------- impact analysis ---------- */
+.an-cards{display:flex;gap:14px;flex-wrap:wrap}
+.an-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 18px;min-width:140px;cursor:pointer;box-shadow:var(--shadow)}
+.an-card.active{border-color:var(--accent2);background:var(--soft)}
+.an-card .n{font-size:24px;font-weight:700}
+.an-card .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.an-card.risk .n{color:var(--off)}
+.an-card.gap .n{color:var(--report)}
+.an-table td.num,.an-table th.num{text-align:right}
+.an-table tr.urow{cursor:pointer}
+.an-table tr.urow:hover td{background:#fafdf9}
+.uupn{color:var(--muted);font-family:ui-monospace,Consolas,monospace;font-size:11px}
+.caret{display:inline-block;width:13px;color:#b9ccbe;font-size:10px}
+.pill{display:inline-block;padding:1px 9px;border-radius:11px;font-weight:700;font-size:11px;min-width:22px;text-align:center}
+.pill.green{background:#e5f3d9;color:var(--on)}
+.pill.amber{background:#fdf3c9;color:var(--report)}
+.pill.red{background:#f7e3df;color:var(--off)}
+.pill.zero{background:var(--soft);color:#9aa89e}
+tr.detail>td{background:#fafdf9;padding:12px 18px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:1000px){.detail-grid{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.panel.enforced{border-left:3px solid var(--on)}
+.panel.bypass{border-left:3px solid var(--off)}
+.panel-h{padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border)}
+.plist2{list-style:none;margin:0;padding:0}
+.plist2 li{padding:8px 12px;border-bottom:1px solid #f0f5f1;font-size:13px}
+.plist2 li:last-child{border-bottom:0}
 .dot.g{background:var(--on)} .dot.r{background:var(--off)} .dot.y{background:var(--report)}
 
 /* ---------- modal / toast ---------- */

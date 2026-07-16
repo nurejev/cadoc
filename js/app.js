@@ -9,6 +9,8 @@
   let selected = new Set();
   let stateFilter = "all", query = "", viewMode = "cards", fmt = "png";
   let currentExport = [];
+  let isDemo = false;
+  let anReport = null, anFilter = "all", anQuery = "";   // impact analysis state
 
   // ---------- helpers ----------
   function show(id) {
@@ -42,14 +44,17 @@
     $("cardsView").style.display = v === "cards" ? "grid" : "none";
     $("listView").style.display = v === "list" ? "block" : "none";
     $("matrixView").style.display = v === "matrix" ? "block" : "none";
+    $("analyzeView").style.display = v === "analyze" ? "block" : "none";
     ["viewCards", "viewList", "viewMatrix"].forEach(id => $(id).classList.remove("active"));
-    $(v === "cards" ? "viewCards" : v === "list" ? "viewList" : "viewMatrix").classList.add("active");
+    if (v !== "analyze") $(v === "cards" ? "viewCards" : v === "list" ? "viewList" : "viewMatrix").classList.add("active");
+    $("analyzeBtn").classList.toggle("active", v === "analyze");
   }
   function updateSelbar() {
     const n = selected.size;
     $("selCount").textContent = n;
     $("selbar").classList.toggle("visible", n > 0);
     $("exportBtn").disabled = policies.length === 0;
+    $("analyzeBtn").disabled = policies.length === 0;
     $("selHint").textContent = n <= 1
       ? "One policy exports as PNG, multiple as a combined PDF"
       : "Multiple selected — will export as a combined PDF";
@@ -115,6 +120,7 @@
       const { policies: raw, org, logo, resolve, account } = await Graph.loadTenant((m) => $("loadStatus").textContent = m);
       tenantName = org?.displayName || account?.tenantId || "";
       tenantLogo = logo || null;
+      isDemo = false; anReport = null;
       raw.sort((a, b) => (a.displayName || "").localeCompare(b.displayName || ""));
       policies = raw.map((r, i) => buildViewModel(r, resolve, i));
       $("tenantName").textContent = tenantName;
@@ -136,6 +142,7 @@
   function loadDemo() {
     tenantName = DEMO_DATA.tenantName;
     tenantLogo = null;
+    isDemo = true; anReport = null;
     const resolve = (id, map) => (map && map[id]) || DEMO_DATA.names[id] || id;
     policies = DEMO_DATA.policies.map((r, i) => buildViewModel(r, resolve, i));
     $("tenantName").textContent = tenantName;
@@ -218,6 +225,75 @@
     const p = policies.find(x => x.id === b.dataset.png);
     toast(`Exporting <span>${p.seq}.png</span>…`);
     Exporter.policyPng(p, tenantName, tenantLogo).catch(err => { console.error(err); toast("Export failed"); });
+  });
+
+  // ---------- impact analysis (on demand only) ----------
+  $("analyzeBtn").addEventListener("click", () => setView("analyze"));
+
+  $("anRun").addEventListener("click", async () => {
+    const scope = $("anScope").value;
+    const includeRO = $("anReportOnly").checked;
+    const vms = policies.filter(p => p.raw.state === "enabled" || (includeRO && p.raw.state === "enabledForReportingButNotEnforced"));
+    if (!vms.length) { $("anStatus").textContent = "No enabled policies to analyse."; return; }
+    $("anRun").disabled = true;
+    const status = (m) => $("anStatus").textContent = m;
+    try {
+      const { lookup, users, ctx } = isDemo
+        ? Analyzer.collectDemo(vms)
+        : await Analyzer.collect(vms, scope, status);
+      status(`Evaluating ${users.length} users × ${lookup.length} policies…`);
+      await new Promise(r => setTimeout(r, 30)); // let the status paint
+      anReport = Analyzer.evaluate(lookup, users, ctx);
+      anFilter = "all"; anQuery = ""; $("anSearch").value = "";
+      renderAnalysis();
+      status(`Done — ${users.length} users, ${lookup.length} policies.`);
+    } catch (e) {
+      console.error("Analysis failed:", e);
+      status("Analysis failed — see browser console.");
+    } finally { $("anRun").disabled = false; }
+  });
+
+  function renderAnalysis() {
+    if (!anReport) return;
+    const s = Analyzer.summary(anReport);
+    $("anCards").innerHTML = [
+      ["all", s.users, "Users", ""],
+      ["risky", s.risky, "Risky bypasses", "risk"],
+      ["nomfa", s.noMfa, "No MFA from CA", "gap"],
+      ["noenforce", s.noEnforce, "No enforcing policy", "gap"],
+    ].map(([f, n, l, cls]) => `<div class="an-card ${cls} ${anFilter === f ? "active" : ""}" data-f="${f}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+    $("anBody").innerHTML = Analyzer.userRows(anReport, anFilter, anQuery);
+    $("anResults").style.display = "block";
+  }
+
+  $("anCards").addEventListener("click", (e) => {
+    const c = e.target.closest("[data-f]"); if (!c) return;
+    anFilter = c.dataset.f; renderAnalysis();
+  });
+  $("anSearch").addEventListener("input", (e) => { anQuery = e.target.value.toLowerCase(); renderAnalysis(); });
+  $("anBody").addEventListener("click", (e) => {
+    const tr = e.target.closest(".urow"); if (!tr) return;
+    const next = tr.nextElementSibling;
+    if (next && next.classList.contains("detail")) { next.remove(); return; }
+    tr.insertAdjacentHTML("afterend", Analyzer.userDetail(anReport[+tr.dataset.user]));
+  });
+
+  $("anExport").addEventListener("click", () => {
+    if (!anReport) return;
+    const meta = {
+      tenant: tenantName || "tenant",
+      date: new Date().toISOString().slice(0, 10),
+      policies: new Set(anReport.flatMap(r => [...r.applied.map(a => a.policy), ...r.bypassing.map(b => b.policy)])).size,
+      scope: `${$("anScope").value} users${$("anReportOnly").checked ? ", incl. report-only" : ""}`,
+    };
+    const html = Analyzer.exportHtml(meta, anReport);
+    const blob = new Blob([html], { type: "text/html" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `CA-Impact-${meta.tenant.replace(/[^\w-]+/g, "-")}-${meta.date}.html`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast("HTML report <span>downloaded</span> — single file, safe to share");
   });
 
   // export modal

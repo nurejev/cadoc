@@ -75,4 +75,18 @@ const DEMO_DATA = {
     "u-break1": "breakglass-01", "u-break2": "breakglass-02", "u-svc": "svc-legacyapp",
     "00000003-0000-0ff1-ce00-000000000000": "Office 365 SharePoint Online",
   },
+
+  // ---- impact-analysis demo data (users + memberships) ----
+  analyzeUsers: [
+    { id: "u-admin", displayName: "Alex Admin", userPrincipalName: "alex.admin@contoso.com", userType: "Member", accountEnabled: true },
+    { id: "u-break1", displayName: "breakglass-01", userPrincipalName: "breakglass-01@contoso.com", userType: "Member", accountEnabled: true },
+    { id: "u-break2", displayName: "breakglass-02", userPrincipalName: "breakglass-02@contoso.com", userType: "Member", accountEnabled: true },
+    { id: "u-svc", displayName: "svc-legacyapp", userPrincipalName: "svc-legacyapp@contoso.com", userType: "Member", accountEnabled: true },
+    { id: "u-emp1", displayName: "Eva Employee", userPrincipalName: "eva@contoso.com", userType: "Member", accountEnabled: true },
+    { id: "u-emp2", displayName: "Milan Medewerker", userPrincipalName: "milan@contoso.com", userType: "Member", accountEnabled: true },
+    { id: "u-guest1", displayName: "Gary Guest", userPrincipalName: "gary_ext#EXT#@contoso.com", userType: "Guest", accountEnabled: true },
+    { id: "u-old", displayName: "Olga Offboarded", userPrincipalName: "olga@contoso.com", userType: "Member", accountEnabled: false },
+  ],
+  roleMembers: { "62e90394-69f5-4237-9190-012177145e10": ["u-admin"] },
+  groupMembers: {},
 };

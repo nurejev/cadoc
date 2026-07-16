@@ -153,5 +153,5 @@ const Graph = (() => {
     return { policies, org, logo, resolve, account };
   }
 
-  return { init, signIn, signOut, loadTenant, get account() { return account; } };
+  return { init, signIn, signOut, loadTenant, ggetAll, gpost, get account() { return account; } };
 })();
