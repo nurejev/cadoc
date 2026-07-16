@@ -45,8 +45,10 @@ main{max-width:1180px;margin:0 auto;padding:28px 24px 80px}
 .spinner{width:44px;height:44px;border:4px solid var(--soft);border-top-color:var(--accent2);border-radius:50%;margin:0 auto 18px;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ---------- toolbar ---------- */
-.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+/* ---------- toolbar (sticky below the header while scrolling) ---------- */
+.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  position:sticky;top:58px;z-index:40;background:var(--bg);
+  padding:12px 0;margin:-12px 0 6px;box-shadow:0 6px 12px -8px rgba(18,51,31,.15)}
 .search{flex:1;min-width:220px;position:relative}
 .search input{width:100%;padding:9px 14px 9px 36px;border:1px solid var(--border);border-radius:10px;font:inherit;background:var(--surface)}
 .search svg{position:absolute;left:11px;top:9px;opacity:.45}
