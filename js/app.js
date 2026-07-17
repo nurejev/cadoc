@@ -215,7 +215,12 @@
   }
   $("homeBtn").addEventListener("click", () => show("screen-home"));
   $("toolPolicies").addEventListener("click", () => { setToolMode("document"); setView("cards"); show("screen-list"); });
-  $("toolDocument").addEventListener("click", () => { setToolMode("document"); setView("cards"); show("screen-list"); openExport(); });
+  // Document tool: opens the policy overview first — select policies (or none
+  // for all), then click "Document" in the toolbar to choose the format.
+  $("toolDocument").addEventListener("click", () => {
+    setToolMode("document"); setView("cards"); show("screen-list");
+    toast("Document mode — select policies (or none for all), then click <span>Document</span>");
+  });
   $("toolAnalyze").addEventListener("click", () => { setToolMode("document"); setView("analyze"); show("screen-list"); });
   // Backup tool: opens the policy overview in backup mode — select policies
   // (or leave unselected for all), then click "Backup (JSON)" in the toolbar.
