@@ -28,14 +28,34 @@ const Graph = (() => {
     return msalApp.logoutPopup({ account: acc }).catch(() => {});
   }
 
-  async function token() {
+  async function token(scopes) {
+    scopes = scopes || AUTH_CONFIG.scopes;
     try {
-      const r = await msalApp.acquireTokenSilent({ scopes: AUTH_CONFIG.scopes, account });
+      const r = await msalApp.acquireTokenSilent({ scopes, account });
       return r.accessToken;
     } catch {
-      const r = await msalApp.acquireTokenPopup({ scopes: AUTH_CONFIG.scopes, account });
+      const r = await msalApp.acquireTokenPopup({ scopes, account });
       return r.accessToken;
     }
+  }
+
+  // Write scope — requested on demand (incremental consent) only for the
+  // Assign-groups tool; every other tool stays read-only.
+  const WRITE_SCOPES = ["Policy.ReadWrite.ConditionalAccess"];
+
+  async function gpatch(url, body) {
+    const t = await token([...AUTH_CONFIG.scopes, ...WRITE_SCOPES]);
+    const r = await fetch(safeGraphUrl(url), {
+      method: "PATCH",
+      headers: { Authorization: "Bearer " + t, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      let msg = `Graph request failed (${r.status})`;
+      try { msg += ": " + ((await r.json()).error?.message || ""); } catch {}
+      throw new Error(msg);
+    }
+    return r.status === 204 ? null : r.json();
   }
 
   // never attach the access token to anything but Microsoft Graph
@@ -153,5 +173,5 @@ const Graph = (() => {
     return { policies, org, logo, resolve, account };
   }
 
-  return { init, signIn, signOut, loadTenant, ggetAll, gpost, get account() { return account; } };
+  return { init, signIn, signOut, loadTenant, gget, ggetAll, gpost, gpatch, get account() { return account; } };
 })();

@@ -202,7 +202,9 @@
   }
   function setToolMode(mode) {
     toolMode = mode;
-    $("exportBtn").textContent = mode === "backup" ? "Backup (JSON)" : "Document";
+    $("exportBtn").textContent = mode === "backup" ? "Backup (JSON)" : mode === "assign" ? "Assign groups" : "Document";
+    $("exportBtn").classList.toggle("primary", mode === "assign");
+    $("exportBtn").classList.toggle("lemon", mode !== "assign");
   }
   async function runBackup() {
     const ps = exportOrder((selected.size ? [...selected] : visible().map(p => p.id)).map(id => policies.find(p => p.id === id)));
@@ -227,6 +229,115 @@
   $("toolJson").addEventListener("click", () => {
     setToolMode("backup"); setView("cards"); show("screen-list");
     toast("Backup mode — select policies (or none for all), then click <span>Backup (JSON)</span>");
+  });
+  // Assign-groups tool: select policies in the overview, then run the wizard.
+  $("toolAssign").addEventListener("click", () => {
+    setToolMode("assign"); setView("cards"); show("screen-list");
+    toast("Assign mode — select the policies to change, then click <span>Assign groups</span>");
+  });
+
+  // ---------- assign-groups wizard ----------
+  let asStep = 0, asAction = null, asGroups = [], asPolicies = [], asResults = null;
+  function openAssign() {
+    if (!selected.size) { toast("Select at least one policy first"); return; }
+    asPolicies = exportOrder([...selected].map(id => policies.find(p => p.id === id)));
+    asStep = 0; asAction = null; asGroups = []; asResults = null;
+    renderAssign();
+    $("assignModal").classList.add("open");
+  }
+  function assignEsc(s) { return esc(s); }
+  async function renderAssign() {
+    const b = $("asBody"), next = $("asNext"), back = $("asBack");
+    $("asSub").textContent = `${asPolicies.length} ${asPolicies.length === 1 ? "policy" : "policies"} selected · step ${Math.min(asStep + 1, 3)} of 3`;
+    back.style.display = asStep > 0 && asStep < 3 ? "inline-flex" : "none";
+    next.style.display = "inline-flex";
+    if (asStep === 0) {
+      next.textContent = "Next";
+      b.innerHTML = `<h4 class="mini" style="margin-bottom:8px">ACTION</h4>` + Assign.ACTIONS.map((a, i) =>
+        `<label class="chk" style="margin:6px 0"><input type="radio" name="asAct" value="${i}" ${asAction === i ? "checked" : ""}> ${assignEsc(a)}</label>`).join("");
+    } else if (asStep === 1) {
+      next.textContent = "Next";
+      if (!asGroups.length) {
+        b.innerHTML = '<p class="mini">Checking which persona groups exist in this tenant…</p>';
+        asGroups = (isDemo
+          ? Object.keys(DEMO_DATA.scopeGroups || {}).map(n => ({ id: "g-" + n, name: n }))
+          : await Assign.resolveGroups((m) => { const el = b.querySelector("p"); if (el) el.textContent = m; })
+        ).map(g => ({ ...g, checked: false }));
+      }
+      b.innerHTML = `<h4 class="mini" style="margin-bottom:8px">TARGET GROUPS</h4>` +
+        (asGroups.map((g, i) => `<label class="chk" style="margin:5px 0"><input type="checkbox" data-asg="${i}" ${g.checked ? "checked" : ""}> ${assignEsc(g.name)}</label>`).join("") || '<p class="mini">No predefined persona groups found in this tenant.</p>') +
+        `<div style="display:flex;gap:8px;margin-top:12px">
+          <input id="asCustom" class="btn" style="flex:1;cursor:text" placeholder="Add another group by exact name…">
+          <button class="btn" id="asCustomAdd">+ Add</button>
+        </div>
+        <p class="mini" style="margin-top:10px">Creating new role-assignable groups is not available here — use the PowerShell script for that.</p>`;
+    } else if (asStep === 2) {
+      next.textContent = "Apply changes";
+      const gsel = asGroups.filter(g => g.checked);
+      const notes = asAction === 2 && asPolicies.some(p => (p.raw.conditions?.users?.includeUsers || []).includes("All"))
+        ? '<p class="mini" style="color:var(--report)">⚠ Policies currently targeting "All users" will switch to the selected groups.</p>' : "";
+      b.innerHTML = `<h4 class="mini">REVIEW — this WRITES to your tenant</h4>
+        <p style="margin:8px 0"><b>Action:</b> ${assignEsc(Assign.ACTIONS[asAction])}</p>
+        <p style="margin:8px 0"><b>Policies (${asPolicies.length}):</b></p>
+        <ul class="plist2" style="border:1px solid var(--border);border-radius:8px;margin-bottom:10px">${asPolicies.map(p => `<li>${assignEsc(p.name)}</li>`).join("")}</ul>
+        ${asAction === 4 ? '<p><b>Target:</b> All users (include groups will be cleared)</p>'
+          : `<p style="margin:8px 0"><b>Groups (${gsel.length}):</b></p><ul class="plist2" style="border:1px solid var(--border);border-radius:8px">${gsel.map(g => `<li>${assignEsc(g.name)} <span class="mini">${assignEsc(g.id)}</span></li>`).join("")}</ul>`}
+        ${notes}
+        ${isDemo ? '<p class="mini" style="color:var(--report)">Demo mode — changes will be simulated, nothing is written.</p>' : ""}`;
+    } else {
+      // results
+      next.textContent = "Close";
+      back.style.display = "none";
+      b.innerHTML = `<h4 class="mini">RESULT</h4><ul class="plist2" style="border:1px solid var(--border);border-radius:8px">` +
+        asResults.map(r => `<li>${r.ok ? '<span class="tag grant">ok</span>' : '<span class="tag block">failed</span>'} ${assignEsc(r.name)}${r.error ? `<div class="mini">${assignEsc(r.error)}</div>` : ""}</li>`).join("") + "</ul>";
+    }
+  }
+  $("asBody").addEventListener("change", (e) => {
+    const r = e.target.closest('[name="asAct"]'); if (r) { asAction = +r.value; return; }
+    const g = e.target.closest("[data-asg]"); if (g) asGroups[+g.dataset.asg].checked = g.checked;
+  });
+  $("asBody").addEventListener("click", async (e) => {
+    if (e.target.id !== "asCustomAdd") return;
+    const name = $("asCustom").value.trim(); if (!name) return;
+    e.target.disabled = true;
+    try {
+      const g = isDemo ? { id: "g-" + name, name } : await Assign.findGroup(name);
+      if (!g) { toast("Group <span>not found</span>"); return; }
+      if (!asGroups.some(x => x.id === g.id)) asGroups.push({ ...g, checked: true });
+      else asGroups.find(x => x.id === g.id).checked = true;
+      renderAssign();
+    } finally { e.target.disabled = false; }
+  });
+  $("asCancel").addEventListener("click", () => $("assignModal").classList.remove("open"));
+  $("asBack").addEventListener("click", () => { asStep--; renderAssign(); });
+  $("asNext").addEventListener("click", async () => {
+    if (asStep === 0) {
+      if (asAction === null) { toast("Choose an action first"); return; }
+      asStep = asAction === 4 ? 2 : 1; // "All Users" needs no group selection
+      renderAssign();
+    } else if (asStep === 1) {
+      if (!asGroups.some(g => g.checked)) { toast("Select at least one group"); return; }
+      asStep = 2; renderAssign();
+    } else if (asStep === 2) {
+      const gids = asGroups.filter(g => g.checked).map(g => g.id);
+      $("asNext").disabled = true;
+      try {
+        if (isDemo) {
+          asResults = asPolicies.map(p => ({ name: p.name, ok: true }));
+          toast("Demo — changes <span>simulated</span>");
+        } else {
+          asResults = await Assign.apply(asPolicies.map(p => p.id), asAction, gids, (m) => toast(m));
+        }
+        asStep = 3; renderAssign();
+        const failed = asResults.filter(r => !r.ok).length;
+        toast(failed ? `Done with <span>${failed} failure(s)</span>` : `All <span>${asResults.length}</span> policies updated`);
+      } catch (e) {
+        console.error(e); toast(`Assign failed: <span>${esc(e.message || e)}</span>`);
+      } finally { $("asNext").disabled = false; }
+    } else {
+      $("assignModal").classList.remove("open");
+      if (!isDemo && asResults?.some(r => r.ok)) await loadFromGraph(true); // reload changed policies
+    }
   });
 
   // ---------- events ----------
@@ -473,8 +584,8 @@
     toast("HTML report <span>downloaded</span> — single file, safe to share");
   });
 
-  // export modal (Document mode) / direct JSON zip (Backup mode)
-  $("exportBtn").addEventListener("click", () => toolMode === "backup" ? runBackup() : openExport());
+  // export modal (Document mode) / direct JSON zip (Backup mode) / wizard (Assign mode)
+  $("exportBtn").addEventListener("click", () => toolMode === "backup" ? runBackup() : toolMode === "assign" ? openAssign() : openExport());
   ["png", "pdf", "docx", "zip", "json"].forEach(f => $("expOpt" + f[0].toUpperCase() + f.slice(1)).addEventListener("click", () => { fmt = f; syncFmt(); }));
   $("expCancel").addEventListener("click", () => $("exportModal").classList.remove("open"));
   $("expGo").addEventListener("click", doExport);

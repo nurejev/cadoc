@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=24">
+<link rel="stylesheet" href="css/app.css?v=25">
 </head>
 <body>
 
@@ -80,6 +80,10 @@
         <div class="tool-ic">🗄</div><h3>Backup (JSON)</h3>
         <p>Select policies (or take all) and download their raw JSON definitions in a zip.</p>
       </div>
+      <div class="tool" id="toolAssign">
+        <div class="tool-ic">👥</div><h3>Assign groups</h3>
+        <p>Change the include/exclude persona groups of selected policies — replace, add, or set to All Users. <span class="tag block">writes to tenant</span></p>
+      </div>
     </div>
 
     <div class="list-card readme">
@@ -89,13 +93,16 @@
         <b>Document</b> turns all or selected policies into shareable documentation — Word, PDF, PNG or a PNG bundle.
         <b>Analyze</b> builds a users × policies impact matrix: which policies apply to whom, who bypasses a policy via exclusions (and why),
         whether a bypass is covered elsewhere, and who gets no MFA from any policy.
-        <b>Backup</b> downloads the raw JSON definitions of your policies in one zip.</p>
+        <b>Backup</b> downloads the raw JSON definitions of your policies in one zip.
+        <b>Assign groups</b> changes the include/exclude persona groups of selected policies (replace, add, or set to All Users) — the only tool that writes to your tenant, always behind an explicit review step.</p>
 
       <h4>Permissions</h4>
       <p>The app uses two <b>delegated, read-only</b> Microsoft Graph permissions, consented once per tenant by an administrator:
         <code>Policy.Read.All</code> to read the Conditional Access policies, named locations, authentication strengths and contexts, and
         <code>Directory.Read.All</code> to resolve users, groups, roles and applications to readable names (and to expand memberships for the analysis).
-        Nothing is ever written to your tenant. The signed-in user needs a reader role such as Security Reader or Global Reader.</p>
+        The read-only tools never write to your tenant, and the signed-in user only needs a reader role such as Security Reader or Global Reader.
+        The <b>Assign groups</b> tool additionally requests <code>Policy.ReadWrite.ConditionalAccess</code> on demand (incremental consent) and requires a role
+        that can edit Conditional Access, such as Conditional Access Administrator or Security Administrator.</p>
 
       <h4>Security</h4>
       <p>Everything runs in your browser — there is no backend and your policy data is never stored or sent anywhere except Microsoft Graph.
@@ -248,6 +255,20 @@
   </div>
 </div>
 
+<!-- ============ ASSIGN GROUPS WIZARD ============ -->
+<div class="modal-bg" id="assignModal">
+  <div class="modal" style="max-width:640px">
+    <h3>Assign groups</h3>
+    <p class="mini" id="asSub"></p>
+    <div id="asBody" style="max-height:60vh;overflow:auto"></div>
+    <div class="row">
+      <button class="btn" id="asCancel">Cancel</button>
+      <button class="btn" id="asBack" style="display:none">← Back</button>
+      <button class="btn primary" id="asNext">Next</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ POLICY DETAIL MODAL ============ -->
 <div class="modal-bg" id="detailModal">
   <div class="modal wide" id="detailBody"></div>
@@ -260,14 +281,15 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/authConfig.js?v=24"></script>
-<script src="js/labels.js?v=24"></script>
-<script src="js/graph.js?v=24"></script>
-<script src="js/model.js?v=24"></script>
-<script src="js/render.js?v=24"></script>
-<script src="js/analyze.js?v=24"></script>
-<script src="js/export.js?v=24"></script>
-<script src="js/demo.js?v=24"></script>
-<script src="js/app.js?v=24"></script>
+<script src="js/authConfig.js?v=25"></script>
+<script src="js/labels.js?v=25"></script>
+<script src="js/graph.js?v=25"></script>
+<script src="js/model.js?v=25"></script>
+<script src="js/render.js?v=25"></script>
+<script src="js/analyze.js?v=25"></script>
+<script src="js/assign.js?v=25"></script>
+<script src="js/export.js?v=25"></script>
+<script src="js/demo.js?v=25"></script>
+<script src="js/app.js?v=25"></script>
 </body>
 </html>
