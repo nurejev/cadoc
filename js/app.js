@@ -355,6 +355,7 @@
     toast("Document mode — select policies (or none for all), then click <span>Document</span>");
   });
   $("toolAnalyze").addEventListener("click", () => { setToolMode("document"); setView("analyze"); show("screen-list"); });
+  $("toolMsLearn").addEventListener("click", openMsLearn);
   // Backup tool: opens the policy overview in backup mode — select policies
   // (or leave unselected for all), then click "Backup (JSON)" in the toolbar.
   $("toolJson").addEventListener("click", () => {
@@ -622,6 +623,56 @@
       $("assignModal").classList.remove("open");
       if (!isDemo && asResults?.some(r => r.ok)) await loadFromGraph(true); // reload changed policies
     }
+  });
+
+  // ---------- MS Learn documented exclusion checks ----------
+  let mlGroups = null, mlFilter = "all";
+  const mlExpanded = new Set();
+  async function openMsLearn() {
+    show("screen-mslearn");
+    if (!policies.length) { $("mlHead").innerHTML = '<p class="mini">No policies loaded.</p>'; $("mlBody").innerHTML = ""; $("mlChips").innerHTML = ""; return; }
+    $("mlHead").innerHTML = '<h3>📘 MS Learn: documented exclusion checks</h3><p class="mini" style="margin:6px 0 0">Running checks…</p>';
+    $("mlChips").innerHTML = ""; $("mlBody").innerHTML = "";
+    // authentication strengths are needed to detect external authentication
+    // methods (EAM) inside strength policies — one read, Policy.Read.All
+    const strengths = new Map();
+    try {
+      if (isDemo) {
+        Object.entries(DEMO_DATA.depSettings || {}).forEach(([k, v]) => { if (k.startsWith("authStrength:")) strengths.set(v.id, v); });
+      } else {
+        (await Graph.ggetAll("/policies/authenticationStrengthPolicies")).forEach(s => strengths.set(s.id, s));
+      }
+    } catch (e) { console.warn("Auth strength fetch failed (EAM check limited):", e.message); }
+    mlGroups = MSLearn.group(MSLearn.run(policies.map(p => p.raw), strengths));
+    mlFilter = "all"; mlExpanded.clear();
+    renderMsLearn();
+  }
+  function renderMsLearn() {
+    if (!mlGroups) return;
+    if (!mlGroups.length) {
+      $("mlHead").innerHTML = MSLearn.renderSummary(mlGroups, MSLearn.checksCount);
+      $("mlChips").innerHTML = "";
+      $("mlBody").innerHTML = MSLearn.renderEmpty();
+      return;
+    }
+    $("mlHead").innerHTML = MSLearn.renderSummary(mlGroups, MSLearn.checksCount);
+    const count = (s) => s === "all" ? mlGroups.length : mlGroups.filter(g => g.check.severity === s).length;
+    $("mlChips").innerHTML = [["all", "All"], ["critical", "Critical"], ["high", "High"], ["medium", "Medium"], ["info", "Info"]]
+      .filter(([k]) => count(k) > 0 || k === "all")
+      .map(([k, l]) => `<button class="fchip ${mlFilter === k ? "active" : ""}" data-mlf="${k}">${l} (${count(k)})</button>`).join("");
+    $("mlBody").innerHTML = MSLearn.renderGroups(mlGroups, mlFilter, mlExpanded);
+  }
+  $("mlChips").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-mlf]"); if (!b) return;
+    mlFilter = b.dataset.mlf; renderMsLearn();
+  });
+  $("mlBody").addEventListener("click", (e) => {
+    const pl = e.target.closest(".pol-link");
+    if (pl) { showDetail(pl.dataset.polid); return; }
+    const t = e.target.closest("[data-mltoggle]"); if (!t) return;
+    const id = t.dataset.mltoggle;
+    mlExpanded.has(id) ? mlExpanded.delete(id) : mlExpanded.add(id);
+    renderMsLearn();
   });
 
   // ---------- events ----------

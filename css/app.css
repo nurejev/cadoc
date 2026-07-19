@@ -255,3 +255,28 @@ footer{border-top:1px solid var(--border);background:var(--surface)}
 /* export rendering: fixed width so PNG/PDF output is consistent */
 .export-stage{position:fixed;left:-10000px;top:0;width:1100px;background:var(--bg);padding:0}
 .export-stage .pcard{width:1100px}
+
+/* ---------- MS Learn documented exclusion checks ---------- */
+.sev{display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.sev.critical{background:#f7dfdb;color:#8f2f1f}
+.sev.high{background:#fbe6d4;color:#a04d0b}
+.sev.medium{background:#fdf3c9;color:var(--report)}
+.sev.info{background:#dde9f7;color:#1f4e8f}
+.ml-card{margin-bottom:14px;overflow:visible}
+.ml-head{width:100%;display:flex;align-items:center;gap:10px;padding:14px 18px;border:0;background:none;text-align:left;font:inherit}
+.ml-head .caret{flex:none}
+.ml-head.open .caret{transform:rotate(90deg);color:var(--accent2)}
+.ml-head:hover .ml-title{color:var(--accent2)}
+.ml-title{font-weight:600;font-size:14px}
+.ml-head .mini{margin-left:auto;flex:none}
+.ml-detail{border-top:1px solid var(--border);padding:16px 18px 18px 41px}
+.ml-detail h5{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 0 5px}
+.ml-detail h5:first-child{margin-top:0}
+.ml-detail h5.ml-red{color:var(--off)}
+.ml-detail h5.ml-blue{color:#1f4e8f}
+.ml-detail h5.ml-green{color:var(--on)}
+.ml-detail p{font-size:13px;line-height:1.55;max-width:860px}
+.ml-detail .ml-pols{border:1px solid var(--border);border-radius:8px;max-width:860px}
+.ml-detail .ml-res{list-style:disc;margin:0 0 0 18px;padding:0}
+.ml-detail .ml-res li{font-size:13px;color:var(--muted);padding:2px 0}
+.ml-doc{display:inline-block;margin-top:14px;font-size:12px;font-weight:600}

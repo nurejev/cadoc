@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=42">
+<link rel="stylesheet" href="css/app.css?v=43">
 </head>
 <body>
 
@@ -76,6 +76,10 @@
         <div class="tool-ic">🔍</div><h3>Analyze</h3>
         <p>Users × policies impact matrix: who bypasses what and why, risky exclusions, MFA gaps.</p>
       </div>
+      <div class="tool" id="toolMsLearn">
+        <div class="tool-ic">📘</div><h3>MS Learn checks <span class="tag new">NEW</span></h3>
+        <p>Check policies against documented Microsoft Learn exclusions &amp; limitations — break-glass, token protection, Teams Rooms, retirements.</p>
+      </div>
       <div class="tool" id="toolJson">
         <div class="tool-ic">🗄</div><h3>Backup (JSON)</h3>
         <p>Select policies (or take all) and download their raw JSON definitions in a zip.</p>
@@ -103,6 +107,8 @@
         <b>Document</b> turns all or selected policies into shareable documentation — Word, PDF, PNG or a PNG bundle.
         <b>Analyze</b> builds a users × policies impact matrix: which policies apply to whom, who bypasses a policy via exclusions (and why),
         whether a bypass is covered elsewhere, and who gets no MFA from any policy.
+        <b>MS Learn checks</b> compares your policies against exclusions, limitations and upcoming behavior changes documented on learn.microsoft.com —
+        missing break-glass exclusions, token protection limits, Teams Rooms / Surface Hub impact, required app exclusions and control retirements.
         <b>Backup</b> downloads the raw JSON definitions of your policies in one zip.
         <b>Assign groups</b> changes the include/exclude persona groups of selected policies (replace, add, or set to All Users) — the only tool that writes to your tenant, always behind an explicit review step.</p>
 
@@ -224,6 +230,13 @@
         </div>
       </div>
     </div>
+  </section>
+
+  <!-- ============ MS LEARN CHECKS ============ -->
+  <section id="screen-mslearn" class="screen">
+    <div class="list-card readme" id="mlHead" style="margin-top:0"></div>
+    <div class="chip-filter" id="mlChips" style="margin:16px 0 14px"></div>
+    <div id="mlBody"></div>
   </section>
 </main>
 
@@ -354,17 +367,18 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/authConfig.js?v=42"></script>
-<script src="js/labels.js?v=42"></script>
-<script src="js/graph.js?v=42"></script>
-<script src="js/model.js?v=42"></script>
-<script src="js/render.js?v=42"></script>
-<script src="js/analyze.js?v=42"></script>
-<script src="js/groupTemplates.js?v=42"></script>
-<script src="js/assign.js?v=42"></script>
-<script src="js/import.js?v=42"></script>
-<script src="js/export.js?v=42"></script>
-<script src="js/demo.js?v=42"></script>
-<script src="js/app.js?v=42"></script>
+<script src="js/authConfig.js?v=43"></script>
+<script src="js/labels.js?v=43"></script>
+<script src="js/graph.js?v=43"></script>
+<script src="js/model.js?v=43"></script>
+<script src="js/render.js?v=43"></script>
+<script src="js/analyze.js?v=43"></script>
+<script src="js/mslearn.js?v=43"></script>
+<script src="js/groupTemplates.js?v=43"></script>
+<script src="js/assign.js?v=43"></script>
+<script src="js/import.js?v=43"></script>
+<script src="js/export.js?v=43"></script>
+<script src="js/demo.js?v=43"></script>
+<script src="js/app.js?v=43"></script>
 </body>
 </html>
