@@ -388,52 +388,67 @@ const GapCheck = (() => {
     ["block-non-corp-network", "Non-corp network block"],
     ["block-high-risk-apps", "High-risk app block"],
   ];
+  // Personas are the CA-number ranges used everywhere else in the app (same
+  // source of truth as Render.caGroup / the Policies view). Ids are the range
+  // base as a string: "0" = Global, "100" = Admins, …
   const PERSONAS = [
-    ["global", "🌐 Global", ["block-legacy-auth", "block-countries"]],
-    ["admins", "🛡 Admins", ["require-mfa", "phishing-resistant-mfa", "require-compliant-device", "sign-in-risk", "user-risk", "session-sif"]],
-    ["internals", "👤 Internals", ["require-mfa", "require-compliant-device", "sign-in-risk", "user-risk"]],
-    ["externals", "🤝 Externals (B2B)", ["require-mfa"]],
-    ["guestadmins", "🛡🤝 Guest Admins", ["require-mfa", "phishing-resistant-mfa", "session-sif"]],
-    ["developers", "💻 Developers", ["require-mfa", "require-compliant-device", "user-risk"]],
-    ["corpserviceaccounts", "⚙ Corp Service Accounts", ["block-non-corp-network"]],
-    ["workloadidentities", "🤖 Workload Identities", ["block-non-corp-network", "sign-in-risk"]],
-    ["microsoft365serviceaccounts", "🔧 M365 Service Accounts", ["block-non-corp-network"]],
+    ["0", "🌐 Global", ["block-legacy-auth", "block-countries"]],
+    ["100", "🛡 Admins", ["require-mfa", "phishing-resistant-mfa", "require-compliant-device", "sign-in-risk", "user-risk", "session-sif"]],
+    ["200", "👤 Internals", ["require-mfa", "require-compliant-device", "sign-in-risk", "user-risk"]],
+    ["300", "🤝 Externals", ["require-mfa"]],
+    ["400", "🙋 Guest users", ["require-mfa"]],
+    ["500", "🛡🤝 Guest admins", ["require-mfa", "phishing-resistant-mfa", "session-sif"]],
+    ["600", "🔧 Microsoft 365 service accounts", ["block-non-corp-network"]],
+    ["700", "☁ Azure service accounts", ["block-non-corp-network"]],
+    ["800", "⚙ Corp service accounts", ["block-non-corp-network"]],
+    ["900", "🤖 Workload identities", ["block-non-corp-network", "sign-in-risk"]],
+    ["1000", "💻 DevOps", ["require-mfa", "require-compliant-device", "user-risk"]],
+    ["1100", "🚨 E-Admins", ["require-mfa", "phishing-resistant-mfa"]],
   ];
+  // Personas always shown even when the tenant has no policy for them — a gap
+  // here is meaningful. Other ranges are only shown when populated.
+  const CORE_PERSONAS = new Set(["0", "100", "200"]);
 
   const TB = "(?<=^|[^A-Za-z0-9])", TE = "(?=$|[^a-z0-9])";
+  // Fallback for tenants that do not use the CA-number naming convention.
   const PERSONA_PATTERNS = [
-    ["microsoft365serviceaccounts", new RegExp(`${TB}(microsoft365serviceaccounts?|m365service|m365svc|directorysynchronization|aadc?onnect|entraconnect)${TE}`, "i")],
-    ["workloadidentities", new RegExp(`${TB}(workload[\\s_-]?identit(?:y|ies)|workloadid|serviceprincipals?|managedidentit(?:y|ies)|agents?|aiagents?|copilotagents?)${TE}`, "i")],
-    ["corpserviceaccounts", new RegExp(`${TB}(corp(?:orate)?[\\s_-]?serviceaccounts?|corpservice|corpsvc|svcaccounts?|service[\\s_-]?accounts?)${TE}`, "i")],
-    ["guestadmins", new RegExp(`${TB}(guestadmins?|externaladmins?|gdap|cspadmins?|partneradmins?)${TE}`, "i")],
-    ["admins", new RegExp(`${TB}(admins?|privilegedusers?|privrole|priv[\\s_-]?roles?)${TE}`, "i")],
-    ["developers", new RegExp(`${TB}(developers?|devs?|engineers?)${TE}`, "i")],
-    ["externals", new RegExp(`${TB}(externals?|guests?|guestusers?|b2b|external[\\s_-]?users?|externalcollabs?)${TE}`, "i")],
-    ["internals", new RegExp(`${TB}(internals?|employees?|members?|staff|users?[\\s_-]?internal)${TE}`, "i")],
-    ["global", new RegExp(`${TB}(global|alluser|tenantwide|baseline|allapps?|allcloudapps?)${TE}`, "i")],
+    ["1100", new RegExp(`${TB}(e[\\s_-]?admins?|emergency[\\s_-]?(?:access|admins?)|break[\\s_-]?glass)${TE}`, "i")],
+    ["600", new RegExp(`${TB}(microsoft365serviceaccounts?|m365service|m365svc|directorysynchronization|aadc?onnect|entraconnect)${TE}`, "i")],
+    ["700", new RegExp(`${TB}(azure[\\s_-]?service[\\s_-]?accounts?|azuresvc)${TE}`, "i")],
+    ["900", new RegExp(`${TB}(workload[\\s_-]?identit(?:y|ies)|workloadid|serviceprincipals?|managedidentit(?:y|ies)|agents?|aiagents?|copilotagents?)${TE}`, "i")],
+    ["800", new RegExp(`${TB}(corp(?:orate)?[\\s_-]?serviceaccounts?|corpservice|corpsvc|svcaccounts?|service[\\s_-]?accounts?)${TE}`, "i")],
+    ["500", new RegExp(`${TB}(guestadmins?|externaladmins?|gdap|cspadmins?|partneradmins?)${TE}`, "i")],
+    ["1000", new RegExp(`${TB}(devops|developers?|devs?|engineers?)${TE}`, "i")],
+    ["100", new RegExp(`${TB}(admins?|privilegedusers?|privrole|priv[\\s_-]?roles?)${TE}`, "i")],
+    ["400", new RegExp(`${TB}(guestusers?|guests?)${TE}`, "i")],
+    ["300", new RegExp(`${TB}(externals?|b2b|external[\\s_-]?users?|externalcollabs?)${TE}`, "i")],
+    ["200", new RegExp(`${TB}(internals?|employees?|members?|staff|users?[\\s_-]?internal)${TE}`, "i")],
+    ["0", new RegExp(`${TB}(global|alluser|tenantwide|baseline|allapps?|allcloudapps?)${TE}`, "i")],
   ];
-  const CA_PREFIX_BLOCKS = [["global", 0, 99], ["admins", 100, 199], ["internals", 200, 299], ["corpserviceaccounts", 300, 399], ["externals", 400, 499], ["workloadidentities", 500, 599]];
 
   function detectPersona(name) {
     if (!name) return null;
+    // primary: the CA number, exactly as the Policies view groups them
+    try {
+      const g = Render.caGroup(name);
+      if (g && g.num != null && PERSONAS.some(([id]) => id === String(g.key))) return String(g.key);
+    } catch { /* Render not available — fall through to name patterns */ }
     for (const [persona, re] of PERSONA_PATTERNS) if (re.test(name)) return persona;
-    const m = /^[\s_-]*CA0*(\d{1,4})\b/i.exec(name);
-    if (m) {
-      const n = parseInt(m[1], 10);
-      for (const [persona, lo, hi] of CA_PREFIX_BLOCKS) if (n >= lo && n <= hi) return persona;
-    }
     return null;
   }
 
-  // A policy can cover multiple personas (name-based + structural).
+  // A policy can cover multiple personas (CA number / name + structural).
   function policyPersonas(p) {
     const out = new Set();
     const named = detectPersona(p.displayName);
     if (named) out.add(named);
-    if (named === "corpserviceaccounts") out.add("microsoft365serviceaccounts");
-    if (allUsers(p)) { out.add("global"); out.add("internals"); out.add("admins"); out.add("developers"); }
-    if ((U(p).includeRoles || []).length) out.add("admins");
-    if (targetsGuests(p)) { out.add("externals"); out.add("guestadmins"); }
+    // structural signals only add personas when the name did not classify it,
+    // so a correctly numbered baseline policy stays in its own persona row.
+    if (!named) {
+      if (allUsers(p)) { out.add("0"); out.add("200"); out.add("100"); }
+      if ((U(p).includeRoles || []).length) out.add("100");
+      if (targetsGuests(p)) { out.add("400"); out.add("300"); }
+    }
     return out;
   }
 
@@ -466,10 +481,10 @@ const GapCheck = (() => {
   }
 
   function severityForGap(persona, control) {
-    if (persona === "admins") return control === "require-mfa" || control === "phishing-resistant-mfa" ? "critical" : "high";
-    if (persona === "internals") return control === "require-mfa" ? "critical" : control === "block-legacy-auth" ? "high" : "medium";
-    if (persona === "global") return control === "block-legacy-auth" ? "high" : "medium";
-    if (persona === "externals" && control === "require-mfa") return "high";
+    if (persona === "100" || persona === "1100") return control === "require-mfa" || control === "phishing-resistant-mfa" ? "critical" : "high";
+    if (persona === "200") return control === "require-mfa" ? "critical" : control === "block-legacy-auth" ? "high" : "medium";
+    if (persona === "0") return control === "block-legacy-auth" ? "high" : "medium";
+    if ((persona === "300" || persona === "400" || persona === "500") && control === "require-mfa") return "high";
     return "medium";
   }
 
@@ -481,6 +496,9 @@ const GapCheck = (() => {
     const rows = [];
     for (const [id, label, expected] of PERSONAS) {
       const assigned = buckets.get(id);
+      // ranges the tenant does not use are left out entirely (the Policies view
+      // does the same); core personas stay so a real gap is still reported.
+      if (!assigned.length && !CORE_PERSONAS.has(id)) continue;
       const cells = CONTROLS.map(([cid]) => {
         if (!expected.includes(cid)) return { control: cid, status: "na", policies: [] };
         const hit = assigned.filter((p) => isEnabled(p) && det[cid](p));
