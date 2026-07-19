@@ -47,6 +47,34 @@
     window.scrollTo(0, 0);
   }
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+  // ---------- theme: Auto (device) → Light → Dark ----------
+  // Auto leaves data-theme off so the CSS prefers-color-scheme block decides;
+  // the logo swaps to the dark-background variant through a CSS content: rule.
+  const THEMES = [
+    { id: "auto", ico: "🌗", label: "Auto (follows your device)" },
+    { id: "light", ico: "☀️", label: "Light" },
+    { id: "dark", ico: "🌙", label: "Dark" },
+  ];
+  function applyTheme(id) {
+    const t = THEMES.find((x) => x.id === id) || THEMES[0];
+    if (t.id === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t.id);
+    const btn = $("themeBtn");
+    if (btn) {
+      btn.querySelector(".tico").textContent = t.ico;
+      btn.title = `Theme: ${t.label} — click to change`;
+    }
+    try { localStorage.setItem("cadoc-theme", t.id); } catch { /* private mode */ }
+    return t.id;
+  }
+  let theme = (() => { try { return localStorage.getItem("cadoc-theme") || "auto"; } catch { return "auto"; } })();
+  applyTheme(theme);
+  $("themeBtn").addEventListener("click", () => {
+    const i = THEMES.findIndex((x) => x.id === theme);
+    theme = applyTheme(THEMES[(i + 1) % THEMES.length].id);
+    toast(`Theme: <span>${THEMES.find((x) => x.id === theme).label}</span>`);
+  });
+
   function toast(msg) {
     const t = $("toast"); t.innerHTML = msg; t.classList.add("show");
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3200);

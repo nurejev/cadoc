@@ -14,12 +14,24 @@ const Exporter = (() => {
     return el;
   }
 
+  // Exports are always rendered light: a dark-theme capture would produce a
+  // black PNG/PDF page, and the deliverable has to work on paper and in Word.
+  function forceLightTheme() {
+    const el = document.documentElement;
+    const prev = el.getAttribute("data-theme");
+    el.setAttribute("data-theme", "light");
+    return () => { if (prev === null) el.removeAttribute("data-theme"); else el.setAttribute("data-theme", prev); };
+  }
+
   async function nodeToPng(node) {
     // skipFonts: system font stack, no @font-face to embed (avoids CSS fetches)
     const opts = { pixelRatio: 2, backgroundColor: "#ffffff", skipFonts: true };
-    // double render works around fonts/images not ready on first pass
-    await htmlToImage.toPng(node, opts);
-    return htmlToImage.toPng(node, opts);
+    const restore = forceLightTheme();
+    try {
+      // double render works around fonts/images not ready on first pass
+      await htmlToImage.toPng(node, opts);
+      return await htmlToImage.toPng(node, opts);
+    } finally { restore(); }
   }
 
   // For PDF pages: JPEG at lower pixel ratio — many pages of full-res PNG can
@@ -27,8 +39,11 @@ const Exporter = (() => {
   // the document. JPEG keeps each page ~5-10x smaller at equal readability.
   async function nodeToJpeg(node) {
     const opts = { pixelRatio: 1.5, backgroundColor: "#ffffff", skipFonts: true, quality: 0.9 };
-    await htmlToImage.toJpeg(node, opts);
-    return htmlToImage.toJpeg(node, opts);
+    const restore = forceLightTheme();
+    try {
+      await htmlToImage.toJpeg(node, opts);
+      return await htmlToImage.toJpeg(node, opts);
+    } finally { restore(); }
   }
 
   function download(dataUrl, filename) {
