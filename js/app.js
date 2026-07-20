@@ -1184,6 +1184,7 @@
     if (e.target.id === "asTplCreate") {
       const tpls = Assign.templates().filter(t => !asGroups.some(g => g.name === t.displayName));
       const t = tpls[+($("asTpl").value || 0)]; if (!t) return;
+      if (!await preConsent([...AUTH_CONFIG.scopes, "Group.ReadWrite.All", "RoleManagement.ReadWrite.Directory"])) return;
       e.target.disabled = true;
       try {
         const g = isDemo
@@ -1199,6 +1200,7 @@
     }
     if (e.target.id === "asNewCreate") {
       const name = $("asNewName").value.trim(); if (!name) return;
+      if (!await preConsent([...AUTH_CONFIG.scopes, "Group.ReadWrite.All", "RoleManagement.ReadWrite.Directory"])) return;
       e.target.disabled = true;
       try {
         const g = isDemo
@@ -1226,6 +1228,7 @@
         toast("Type <span>ALL</span> to confirm a tenant-wide assignment change");
         wideBox.focus(); return;
       }
+      if (!await preConsent([...AUTH_CONFIG.scopes, "Policy.ReadWrite.ConditionalAccess"])) return;
       const gids = asGroups.filter(g => g.checked).map(g => g.id);
       $("asNext").disabled = true;
       try {
@@ -1733,6 +1736,9 @@
   $("mlApplyGo").addEventListener("click", async () => {
     if (!mlFixes || !$("mlApplyOk").checked) return;
     const del = $("mlApplyDelete").checked;
+    // Applying fixes may also have to create service principals, so both write
+    // scopes are consented here rather than deep inside the loop.
+    if (!await preConsent([...AUTH_CONFIG.scopes, "Policy.ReadWrite.ConditionalAccess", "Application.ReadWrite.All"])) return;
     const btn = $("mlApplyGo"); btn.disabled = true;
     const out = $("mlApplyResult"); out.style.display = ""; out.innerHTML = "";
     const log = (cls, msg) => { out.insertAdjacentHTML("beforeend", `<div class="ml-apply-row ${cls}">${msg}</div>`); out.scrollTop = out.scrollHeight; };

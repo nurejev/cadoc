@@ -358,6 +358,9 @@ tr.detail>td{background:var(--hover);padding:12px 18px}
 .modal .row{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
 .chk{display:flex;gap:8px;align-items:center;margin-top:14px;font-size:13px;color:var(--muted)}
 #depModal{z-index:320}
+/* the popup-blocked prompt appears while another modal is already open, so it
+   has to sit above every one of them (but below the toast) */
+#popupModal{z-index:340}
 .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--green-deep);color:#fff;padding:12px 22px;border-radius:12px;box-shadow:var(--shadow);display:none;z-index:400;font-weight:600}
 .toast.show{display:block}
 .toast span{color:var(--lemon)}

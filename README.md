@@ -171,6 +171,14 @@ The signed-in user needs a reader role (Security Reader / Global Reader) for the
 - **All JavaScript libraries are self-hosted** in `vendor/` — nothing loads from a third-party CDN at runtime.
 - **Exports are generated locally** and carry the connected tenant's branding, not Limon-IT's.
 
+## Popups and consent
+
+Every write action asks for its Graph scopes **on the click that starts it**, before doing any work. That is not politeness — it is the only way the sign-in window opens reliably.
+
+Browsers only allow `window.open` while a user gesture is still "active". Chrome is lenient; **Edge and Safari withdraw the gesture as soon as the call stack awaits anything**. A consent popup raised in the middle of an import — after reading the zip, resolving dependencies and several Graph round-trips — is therefore blocked, and the run dies half-way with permissions it never got.
+
+Pulling consent to the front of the handler means the popup opens while the click is still fresh, and the rest of the run is pure Graph calls against a token already in hand. If a popup is blocked anyway, the app says so and offers a **Continue** button — clicking it is a new gesture, so that window is allowed.
+
 ## Protected actions and step-up authentication
 
 If a tenant protects Conditional Access administration with an authentication context ([protected actions](https://learn.microsoft.com/entra/identity/role-based-access-control/protected-actions-overview)), a write is refused until the caller presents a token carrying the required claims. More permission does not fix this — the token itself has to be re-minted.
