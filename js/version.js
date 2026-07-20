@@ -8,7 +8,7 @@
 // ======================================================================
 const APP_BUILD = {
   version: "1.0",
-  build: 111,
+  build: 112,
   date: "2026-07-20",
   get label() { return `v${this.version}.${this.build}`; },
   get full() { return `${this.label} · ${this.date}`; },
@@ -18,9 +18,9 @@ const APP_BUILD = {
 // its own pace, so a tenant-side reviewer can tell which one changed since
 // they last looked without diffing the whole app. Bump the tool you touched.
 const TOOL_VERSIONS = {
-  toolPolicies:     { v: "1.9", note: "cards / list / settings matrix, persona grouping, dependency inspector, full-screen matrix, selection actions, delete with typed confirmation" },
+  toolPolicies:     { v: "2.0", note: "cards / list / settings matrix, persona grouping, dependency inspector, full-screen matrix, selection actions, delete with typed confirmation, per-policy what-if flow" },
   toolDocument:     { v: "1.4", note: "Word, PDF, PNG and PNG-bundle export with tenant branding" },
-  toolAnalyze:      { v: "1.4", note: "users × policies impact matrix, group filters, standalone HTML report" },
+  toolAnalyze:      { v: "1.5", note: "users × policies impact matrix, group filters, standalone HTML report, scoped matrix columns, what-if simulator" },
   toolGapCheck:     { v: "1.6", note: "bypass checks, persona × control matrix, deployed-but-Off state, Markdown export" },
   toolExclusions:   { v: "1.3", note: "grouped exclusion sets, effective users, merged matrix rows, CSV and Markdown" },
   toolBaseline:     { v: "1.5", note: "Limon-IT catalog, card and table views, number-clash detection, collapsible personas, catalog revision 2026-07-20, refresh, on-screen gap report" },

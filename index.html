@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=111">
+<link rel="stylesheet" href="css/app.css?v=112">
 </head>
 <body>
 
@@ -251,6 +251,23 @@
           <span class="mini" id="anStatus"></span>
         </div>
       </div>
+      <!-- What-If simulator: independent of the full impact run — enter a user
+           and a few conditions to see which policies apply and the outcome. -->
+      <div class="list-card" style="margin-top:14px">
+        <h3 style="margin-bottom:4px">⑃ What-If — simulate a sign-in</h3>
+        <p class="mini" style="max-width:640px;margin-bottom:12px">Pick a user and (optionally) the sign-in conditions. CA Doc evaluates every policy the way Entra would and shows which apply, which don't and why, and the combined result — like the Conditional Access What-If in the portal.</p>
+        <div class="wf-simform">
+          <div class="fld" style="flex:1;min-width:220px"><label>User (UPN or object ID)</label><input id="wfUser" placeholder="user@contoso.com"></div>
+          <div class="fld"><label>Cloud app</label><select id="wfApp"><option value="any">Any</option><option value="All">All cloud apps</option><option value="00000002-0000-0ff1-ce00-000000000000">Office 365 Exchange</option><option value="00000003-0000-0ff1-ce00-000000000000">SharePoint</option><option value="797f4846-ba00-4fd7-ba43-dac1f8f63013">Azure management</option><option value="Microsoft Admin Portals">Admin portals</option></select></div>
+          <div class="fld"><label>Platform</label><select id="wfPlatform"><option value="">Any</option><option value="windows">Windows</option><option value="macOS">macOS</option><option value="iOS">iOS</option><option value="android">Android</option><option value="linux">Linux</option></select></div>
+          <div class="fld"><label>Client app</label><select id="wfClient"><option value="">Any</option><option value="browser">Browser</option><option value="mobileAppsAndDesktopClients">Mobile &amp; desktop</option><option value="exchangeActiveSync">Exchange ActiveSync</option><option value="other">Other (legacy)</option></select></div>
+          <div class="fld"><label>Sign-in risk</label><select id="wfSirisk"><option value="">Any</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+          <div class="fld"><label>User risk</label><select id="wfUrisk"><option value="">Any</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+          <button class="btn primary" id="wfRun">Simulate</button>
+        </div>
+        <div id="wfResult"></div>
+      </div>
+
       <div id="anResults" style="display:none">
         <div class="an-cards" id="anCards"></div>
         <div class="toolbar" style="margin-top:14px">
@@ -638,25 +655,26 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/version.js?v=111"></script>
-<script src="js/authConfig.js?v=111"></script>
-<script src="js/labels.js?v=111"></script>
-<script src="js/graph.js?v=111"></script>
-<script src="js/model.js?v=111"></script>
-<script src="js/render.js?v=111"></script>
-<script src="js/analyze.js?v=111"></script>
-<script src="js/mslearn.js?v=111"></script>
-<script src="js/gapcheck.js?v=111"></script>
-<script src="js/exclusions.js?v=111"></script>
-<script src="js/baselineData.js?v=111"></script>
-<script src="js/baselineJoeyData.js?v=111"></script>
-<script src="js/baseline.js?v=111"></script>
-<script src="js/groupTemplates.js?v=111"></script>
-<script src="js/assign.js?v=111"></script>
-<script src="js/cagroups.js?v=111"></script>
-<script src="js/import.js?v=111"></script>
-<script src="js/export.js?v=111"></script>
-<script src="js/demo.js?v=111"></script>
-<script src="js/app.js?v=111"></script>
+<script src="js/version.js?v=112"></script>
+<script src="js/authConfig.js?v=112"></script>
+<script src="js/labels.js?v=112"></script>
+<script src="js/graph.js?v=112"></script>
+<script src="js/model.js?v=112"></script>
+<script src="js/render.js?v=112"></script>
+<script src="js/analyze.js?v=112"></script>
+<script src="js/whatif.js?v=112"></script>
+<script src="js/mslearn.js?v=112"></script>
+<script src="js/gapcheck.js?v=112"></script>
+<script src="js/exclusions.js?v=112"></script>
+<script src="js/baselineData.js?v=112"></script>
+<script src="js/baselineJoeyData.js?v=112"></script>
+<script src="js/baseline.js?v=112"></script>
+<script src="js/groupTemplates.js?v=112"></script>
+<script src="js/assign.js?v=112"></script>
+<script src="js/cagroups.js?v=112"></script>
+<script src="js/import.js?v=112"></script>
+<script src="js/export.js?v=112"></script>
+<script src="js/demo.js?v=112"></script>
+<script src="js/app.js?v=112"></script>
 </body>
 </html>

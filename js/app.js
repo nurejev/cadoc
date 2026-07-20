@@ -355,9 +355,26 @@
 
   function showDetail(id) {
     const p = policies.find(x => x.id === id); if (!p) return;
-    $("detailBody").innerHTML = Render.card(p, tenantName);
+    // The what-if flow is opt-in (a button under the card) so the detail stays
+    // compact until you actually want to trace what the policy does.
+    $("detailBody").innerHTML = Render.card(p, tenantName)
+      + `<div class="wf-toggle"><button class="btn" id="wfShow" data-wf="${p.id}">⑃ What-if flow — what happens when this triggers</button></div>
+         <div class="wf-panel" id="wfPanel" style="display:none"></div>`;
     $("detailModal").classList.add("open");
   }
+  // reveal / hide the per-policy flow on demand
+  $("detailBody").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-wf]"); if (!b) return;
+    const panel = $("wfPanel"); const p = policies.find(x => x.id === b.dataset.wf); if (!p || !panel) return;
+    if (panel.style.display === "none") {
+      panel.innerHTML = WhatIf.policyFlow(p);
+      panel.style.display = "block";
+      b.textContent = "⑃ Hide what-if flow";
+    } else {
+      panel.style.display = "none";
+      b.textContent = "⑃ What-if flow — what happens when this triggers";
+    }
+  });
 
   // ---------- export ----------
   function openExport() {
@@ -2706,6 +2723,37 @@
     const p = policies.find(x => x.name === name);
     if (p) showDetail(p.id);
   }
+
+  // ---------- What-If simulator ----------
+  $("wfRun").addEventListener("click", async () => {
+    const q = $("wfUser").value.trim();
+    if (!q) { toast("Enter a user (UPN or object ID)"); $("wfUser").focus(); return; }
+    if (!policies.length) { toast("No policies loaded"); return; }
+    const btn = $("wfRun"); btn.disabled = true; btn.textContent = "Simulating…";
+    $("wfResult").innerHTML = '<p class="mini">Resolving the user and their group / role membership…</p>';
+    try {
+      const subject = isDemo ? demoSubject(q) : await WhatIf.resolveSubject(q);
+      if (!subject) { $("wfResult").innerHTML = `<p class="mini" style="color:var(--off)">No user found for "${esc(q)}".</p>`; return; }
+      const scenario = {
+        app: $("wfApp").value, platform: $("wfPlatform").value, clientApp: $("wfClient").value,
+        signInRisk: $("wfSirisk").value, userRisk: $("wfUrisk").value, location: "",
+      };
+      const res = WhatIf.simulate(policies.map(p => p.raw), subject, scenario);
+      $("wfResult").innerHTML = WhatIf.renderSim(res);
+    } catch (e) {
+      console.error(e); $("wfResult").innerHTML = `<p class="mini" style="color:var(--off)">Simulation failed: ${esc(e.message || e)}</p>`;
+    } finally { btn.disabled = false; btn.textContent = "Simulate"; }
+  });
+  // demo mode: fabricate a subject from the sample scope groups so the tool works offline
+  function demoSubject(q) {
+    const groups = new Set(Object.values(DEMO_DATA.scopeGroups || {}).flat().slice(0, 3));
+    return { id: "demo-" + q, upn: q, name: q, isGuest: /guest/i.test(q), groupIds: groups, roleIds: new Set() };
+  }
+  // policy names in the simulation open the policy card
+  $("wfResult").addEventListener("click", (e) => {
+    const pl = e.target.closest(".pol-link");
+    if (pl) openPolicyByName(pl.dataset.pol);
+  });
   $("anBody").addEventListener("click", (e) => {
     const pl = e.target.closest(".pol-link");
     if (pl) { openPolicyByName(pl.dataset.pol); return; }
