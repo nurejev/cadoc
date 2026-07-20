@@ -298,26 +298,32 @@ const CaGroups = (() => {
   function renderTable(res, filter, q) {
     const rows = filtered(res, filter, q);
     if (!rows.length) return '<p class="mini" style="padding:20px">No groups match the current filter.</p>';
-    return `<div class="tablewrap"><table class="mtable cg-table">
-      <thead><tr><th style="width:34px"></th><th>Group</th><th style="width:150px">Type</th><th style="width:110px">Policies</th><th style="width:150px">Expected by</th><th style="width:90px">Members</th></tr></thead>
+    // Deliberately NOT .mtable: that class makes the header row sticky for the
+    // wide scrolling matrices, which here just slides it under the sticky
+    // toolbar and leaves the list looking headerless.
+    return `<div class="cg-tablewrap"><table class="cg-table">
+      <thead><tr><th style="width:34px"></th><th>Group</th><th style="width:150px">Type</th><th style="width:120px">Policies</th><th style="width:140px">Expected by</th><th style="width:110px">Members</th></tr></thead>
       <tbody>${rows.map((r) => {
         const st = STATUS[r.status];
         const type = r.status === "missing"
           ? (r.template ? (r.template.membershipRule ? "dynamic (template)" : "role-assignable (template)") : "unknown — no template")
           : r.dynamic ? "dynamic"
           : r.roleAssignable ? "role-assignable" : "assigned";
-        const mem = r.memberError ? '<span class="cg-err">error</span>'
-          : r.members ? `${r.memberTotal}${r.memberTotal > MEMBER_CAP ? ` <span class="mini">(first ${MEMBER_CAP})</span>` : ""}`
+        // The member column doubles as the per-group scan trigger, so you can
+        // read one group without paying for all of them.
+        const mem = r.memberError ? '<span class="cg-err" title="scan failed">error</span>'
+          : r.members ? `<b>${r.memberTotal}</b>${r.memberTotal > MEMBER_CAP ? ` <span class="mini">(first ${MEMBER_CAP})</span>` : ""}`
+          : r.id ? `<button class="btn sm cg-scan" data-cgscan="${esc(r.name)}">Scan</button>`
           : '<span class="mini muted">—</span>';
         return `<tr class="cg-row" data-cgrow="${esc(r.name)}">
           <td class="cg-ic ${st.cls}">${st.icon}</td>
-          <td><b>${esc(r.name)}</b>${r.id ? ` <span class="mini muted">${esc(r.id)}</span>` : ""}
+          <td><b>${esc(r.name)}</b>${r.id ? `<div class="mini muted">${esc(r.id)}</div>` : ""}
             ${r.drift ? `<div class="mini" style="color:var(--report)">⚠ ${esc(r.drift)}</div>` : ""}
             ${r.status === "dangling" ? '<div class="mini" style="color:var(--off)">Referenced by a policy but not found in the directory</div>' : ""}</td>
           <td class="mini">${esc(type)}</td>
           <td class="mini">${r.refCount ? `${r.refCount} <span class="muted">(${r.refs.include.length} inc / ${r.refs.exclude.length} exc)</span>` : '<span class="muted">unused</span>'}</td>
           <td class="mini">${r.sources.map((s) => `<span class="tag">${esc(s)}</span>`).join(" ")}</td>
-          <td class="mini">${mem}</td>
+          <td class="mini cg-mem">${mem}</td>
         </tr>`;
       }).join("")}</tbody></table></div>`;
   }

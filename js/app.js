@@ -41,11 +41,42 @@
   const AN_PAGE_SIZE = 50;
 
   // ---------- helpers ----------
+  // ---------- screens + browser history ----------
+  // This is a single page, so without history entries the Back button leaves
+  // the site entirely — and after an MSAL popup sign-in the previous entry may
+  // be the login redirect, which is why it felt like being "thrown out".
+  // Each tool screen pushes a state; Back walks those before it ever leaves.
+  const HISTORY_SCREENS = new Set(["screen-home", "screen-list", "screen-baseline",
+    "screen-cagroups", "screen-mslearn", "screen-gapcheck", "screen-exclusions"]);
+  let navSuppress = false;   // true while we are reacting to popstate
+
   function show(id) {
     document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
     $(id).classList.add("active");
     window.scrollTo(0, 0);
+    if (navSuppress || !HISTORY_SCREENS.has(id)) return;
+    // Replace rather than push when the screen has not changed, so clicking the
+    // same tool twice does not need two Backs to leave it.
+    if (history.state && history.state.screen === id) return;
+    history.pushState({ screen: id }, "", location.pathname + location.search);
   }
+
+  window.addEventListener("popstate", (e) => {
+    // A modal or full-screen panel is the thing Back should close first —
+    // that is what the same gesture does in every other app.
+    const open = [...document.querySelectorAll(".modal-bg.open")];
+    const fs = Fs.isOpen();
+    if (open.length || fs) {
+      open.forEach(m => m.classList.remove("open"));
+      if (fs) Fs.close();
+      history.pushState(history.state || { screen: "screen-home" }, "", location.pathname + location.search);
+      return;
+    }
+    const target = (e.state && e.state.screen) || (policies.length ? "screen-home" : null);
+    if (!target) return;                       // not signed in — let the browser go back
+    navSuppress = true;
+    try { show(target); } finally { navSuppress = false; }
+  });
   const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   // ---------- build stamp ----------
   // Shown before sign-in so a stale deploy (or a cached tab) is obvious.
@@ -909,6 +940,14 @@
     }
     if (e.target.id === "cgMemberGo") { startMemberScan(); return; }
     if (e.target.id === "cgMemberStop") { cgStop = true; return; }
+    // Scan one group. The full scan is a call per group, so reading a single
+    // one you are curious about should not cost the other 130.
+    const one = e.target.closest("[data-cgscan]");
+    if (one) {
+      e.stopPropagation();          // do not also open the row detail
+      await scanOneGroup(one.dataset.cgscan, one);
+      return;
+    }
     // a row in the check table opens that group's detail
     const row = e.target.closest("[data-cgrow]");
     if (row) showGroupRow(row.dataset.cgrow);
@@ -950,6 +989,32 @@
       </div>${empties}
       ${errs.length ? `<p class="mini" style="color:var(--off)">${errs.length} group${errs.length === 1 ? "" : "s"} could not be read: ${errs.map(r => esc(r.name)).join(", ")}</p>` : ""}
       ${CaGroups.renderMatrix(m, cgQuery)}`;
+  }
+
+  // One group's members, on demand. Same reader as the bulk scan so a row
+  // filled this way is indistinguishable from one filled by "read all" — it
+  // counts towards the matrix and the Markdown export straight away.
+  async function scanOneGroup(name, btn) {
+    const r = cgRes && cgRes.rows.find(x => x.name === name);
+    if (!r || !r.id) return;
+    const label = btn ? btn.textContent : null;
+    if (btn) { btn.disabled = true; btn.textContent = "…"; }
+    try {
+      if (isDemo) {
+        r.memberTotal = 3;
+        r.members = [1, 2, 3].map(k => ({ id: `u${k}-${r.id}`, name: `Demo user ${k}`, upn: `demo${k}@contoso.com`, disabled: k === 3 }));
+      } else {
+        await CaGroups.loadMembers([r], {});
+      }
+      if (r.memberError) toast(`Could not read <span>${esc(r.name)}</span>: ${esc(r.memberError)}`);
+      else toast(`<span>${esc(r.name)}</span> — ${r.memberTotal} member${r.memberTotal === 1 ? "" : "s"}`);
+    } catch (e) {
+      console.error(e); toast(`Member read failed: <span>${esc(e.message || e)}</span>`);
+    } finally {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = label; }
+    }
+    renderCaGroups();
+    if ($("depModal").classList.contains("open")) showGroupRow(name);
   }
 
   async function startMemberScan() {
@@ -1020,10 +1085,18 @@
       ${list(r.refs.include, "Included in")}
       ${list(r.refs.exclude, "Excluded from")}
       ${!r.refCount ? '<p class="mini muted" style="margin-top:10px">No policy references this group.</p>' : ""}
+      ${r.id && !r.members ? `<div class="row" style="justify-content:flex-start;margin-top:12px">
+        <button class="btn" id="cgOneScan" data-cgone="${esc(r.name)}">Read members of this group</button></div>` : ""}
+      ${r.memberError ? `<p class="mini" style="color:var(--off)">Member read failed: ${esc(r.memberError)}</p>` : ""}
       ${r.members ? `<h5 class="mini" style="margin:10px 0 4px">Members (${r.memberTotal})</h5>
         <ul class="plist2" style="border:1px solid var(--border);border-radius:8px">${r.members.map(m => `<li>${esc(m.name)} <span class="mini muted">${esc(m.upn || "")}</span>${m.disabled ? ' <span class="tag block">disabled</span>' : ""}</li>`).join("") || '<li class="mini">No members</li>'}</ul>` : ""}`;
     $("depModal").classList.add("open");
   }
+  // the same per-group scan, from inside the group's detail overlay
+  $("depBody").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-cgone]");
+    if (b) scanOneGroup(b.dataset.cgone, b);
+  });
 
   $("cgTabs").addEventListener("click", (e) => {
     const b = e.target.closest("[data-cgtab]"); if (!b) return;
