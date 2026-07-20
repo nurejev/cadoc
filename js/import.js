@@ -131,6 +131,15 @@ const Importer = (() => {
   async function ensureDependencies(bundle, onStatus) {
     const maps = { group: {}, loc: {}, strength: {}, ctx: {}, tou: {}, ph: {} };
     const log = { created: [], reused: [], warnings: [] };
+    // Groups are always created role-assignable; a dynamic source group loses
+    // its membership rule as a result (Graph forbids the combination), so say so.
+    const noteGroup = (g, label) => {
+      (g.created ? log.created : log.reused).push(`${label}${g.created ? " (role-assignable)" : ""}`);
+      if (g.ruleDropped) {
+        log.warnings.push(`"${g.name}" was created as an ASSIGNED role-assignable group — Entra does not allow role-assignable groups to use dynamic membership. `
+          + `Add the members manually${g.membershipRule ? `, or recreate it as a dynamic group without the role-assignable flag. Original rule: ${g.membershipRule}` : "."}`);
+      }
+    };
 
     // ---- template placeholders ({{group:…}} / {{location:…}} / {{authstrength:…}}) ----
     const placeholders = collectPlaceholders(bundle.policies);
@@ -145,7 +154,7 @@ const Importer = (() => {
             const tpl = Assign.templates().find(t => t.displayName === p.name) || { displayName: p.name };
             const g = await Assign.createGroup(tpl);
             maps.ph[key(p)] = g.id;
-            (g.created ? log.created : log.reused).push(`Group (template): ${p.name}`);
+            noteGroup(g, `Group (template): ${p.name}`);
           } else if (p.kind === "location") {
             locs = locs || await Graph.ggetAll("/identity/conditionalAccess/namedLocations");
             const f = locs.find(x => x.displayName === p.name);
@@ -179,7 +188,7 @@ const Importer = (() => {
       try {
         const g = await Assign.createGroup({ displayName: gname });
         maps.personaGroupIds[gname] = g.id;
-        (g.created ? log.created : log.reused).push(`Group (persona): ${gname}`);
+        noteGroup(g, `Group (persona): ${gname}`);
       } catch (e) { log.warnings.push(`Persona group ${gname}: ${e.message}`); }
     }
 
@@ -189,7 +198,7 @@ const Importer = (() => {
         const dyn = (raw.groupTypes || []).includes("DynamicMembership");
         const g = await Assign.createGroup({ displayName: raw.displayName, description: raw.description, mailNickname: raw.mailNickname, dynamic: dyn, membershipRule: raw.membershipRule });
         maps.group[raw.id] = g.id;
-        (g.created ? log.created : log.reused).push(`Group: ${raw.displayName}`);
+        noteGroup(g, `Group: ${raw.displayName}`);
       } catch (e) { log.warnings.push(`Group ${raw.displayName}: ${e.message}`); }
     }
 

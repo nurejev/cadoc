@@ -44,34 +44,39 @@ const Assign = (() => {
   }
 
   // ---------- group creation (pure Graph, no PowerShell) ----------
-  // Static groups are ALWAYS created role-assignable (isAssignableToRole:true —
-  // immutable, must be set at creation). Dynamic templates keep their membership
-  // rule instead: Graph does not allow role-assignable + dynamic membership.
+  // EVERY group this tool creates is role-assignable (isAssignableToRole:true).
+  // That flag is immutable — it can only be set at creation — so getting it
+  // right here is the only chance.
+  //
+  // Graph does not allow role-assignable AND dynamic membership on the same
+  // group. Role-assignable wins: a dynamic template is created as an assigned
+  // (static) role-assignable group and its membership rule is reported back so
+  // the caller can surface it, rather than silently creating a group that can
+  // never hold a role assignment.
   function buildGroupPayload(t) {
     const nickname = (String(t.mailNickname || t.displayName || "grp").replace(/[^A-Za-z0-9]/g, "").slice(0, 60)) || "CADSECgroup";
-    const p = {
+    return {
       displayName: t.displayName,
       description: t.description || "Conditional Access target group. Created by Conditional Access Baseline Tools.",
       mailEnabled: false,
       securityEnabled: true,
       mailNickname: nickname,
+      isAssignableToRole: true,
     };
-    if (t.dynamic) {
-      p.groupTypes = ["DynamicMembership"];
-      p.membershipRule = t.membershipRule || "";
-      p.membershipRuleProcessingState = "On";
-    } else {
-      p.isAssignableToRole = true;
-    }
-    return p;
   }
 
-  // Create (or reuse) a group. Returns {id, name, created, dynamic}.
+  // Create (or reuse) a group. Returns
+  // {id, name, created, roleAssignable, ruleDropped?, membershipRule?}
   async function createGroup(template) {
     const existing = await findGroup(template.displayName);
     if (existing) return { ...existing, created: false };
     const g = await Graph.gpostGroupCreate("/groups", buildGroupPayload(template));
-    return { id: g.id, name: g.displayName, created: true, dynamic: !!template.dynamic };
+    const out = { id: g.id, name: g.displayName, created: true, roleAssignable: true };
+    if (template.dynamic) {
+      out.ruleDropped = true;
+      out.membershipRule = template.membershipRule || "";
+    }
+    return out;
   }
 
   function templates() { return typeof GROUP_TEMPLATES !== "undefined" ? GROUP_TEMPLATES : []; }

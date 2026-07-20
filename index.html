@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=69">
+<link rel="stylesheet" href="css/app.css?v=70">
 </head>
 <body>
 
@@ -134,7 +134,7 @@
         The read-only tools never write to your tenant, and the signed-in user only needs a reader role such as Security Reader or Global Reader.
         The <b>Assign groups</b> tool additionally requests <code>Policy.ReadWrite.ConditionalAccess</code> on demand (incremental consent) and requires a role
         that can edit Conditional Access, such as Conditional Access Administrator or Security Administrator.
-        Creating missing persona groups (always as role-assignable security groups) additionally requests
+        Creating missing groups (always role-assignable — <code>isAssignableToRole</code> is immutable, so it is set at creation) additionally requests
         <code>Group.ReadWrite.All</code> and <code>RoleManagement.ReadWrite.Directory</code> and requires the Privileged Role Administrator role.</p>
 
       <h4>Credits &amp; thanks</h4>
@@ -514,22 +514,22 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/authConfig.js?v=69"></script>
-<script src="js/labels.js?v=69"></script>
-<script src="js/graph.js?v=69"></script>
-<script src="js/model.js?v=69"></script>
-<script src="js/render.js?v=69"></script>
-<script src="js/analyze.js?v=69"></script>
-<script src="js/mslearn.js?v=69"></script>
-<script src="js/gapcheck.js?v=69"></script>
-<script src="js/exclusions.js?v=69"></script>
-<script src="js/baselineData.js?v=69"></script>
-<script src="js/baseline.js?v=69"></script>
-<script src="js/groupTemplates.js?v=69"></script>
-<script src="js/assign.js?v=69"></script>
-<script src="js/import.js?v=69"></script>
-<script src="js/export.js?v=69"></script>
-<script src="js/demo.js?v=69"></script>
-<script src="js/app.js?v=69"></script>
+<script src="js/authConfig.js?v=70"></script>
+<script src="js/labels.js?v=70"></script>
+<script src="js/graph.js?v=70"></script>
+<script src="js/model.js?v=70"></script>
+<script src="js/render.js?v=70"></script>
+<script src="js/analyze.js?v=70"></script>
+<script src="js/mslearn.js?v=70"></script>
+<script src="js/gapcheck.js?v=70"></script>
+<script src="js/exclusions.js?v=70"></script>
+<script src="js/baselineData.js?v=70"></script>
+<script src="js/baseline.js?v=70"></script>
+<script src="js/groupTemplates.js?v=70"></script>
+<script src="js/assign.js?v=70"></script>
+<script src="js/import.js?v=70"></script>
+<script src="js/export.js?v=70"></script>
+<script src="js/demo.js?v=70"></script>
+<script src="js/app.js?v=70"></script>
 </body>
 </html>

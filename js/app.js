@@ -654,7 +654,8 @@
         const g = isDemo
           ? { id: "g-" + t.displayName, name: t.displayName, created: true }
           : await Assign.createGroup(t);
-        toast(g.created ? `Group <span>${esc(g.name)}</span> created${isDemo ? " (simulated)" : ""}` : `Group <span>${esc(g.name)}</span> already existed — reused`);
+        toast(g.created ? `Role-assignable group <span>${esc(g.name)}</span> created${isDemo ? " (simulated)" : ""}` : `Group <span>${esc(g.name)}</span> already existed — reused`);
+        if (g.ruleDropped) toast(`<span>${esc(g.name)}</span> is assigned, not dynamic — role-assignable groups cannot use a membership rule. Add members manually.`);
         asAddCreated(g);
       } catch (err) { console.error(err); toast(`Create failed: <span>${esc(err.message || err)}</span>`); }
       finally { e.target.disabled = false; }
@@ -1075,7 +1076,7 @@
         description: MSLearn.GROUP_PURPOSE[key] || "Created by Conditional Access Baseline Tools",
         securityEnabled: true, mailEnabled: false, isAssignableToRole: true,
       });
-      toast(`Group <span>${esc(g.displayName || name)}</span> created — add the resource accounts, then re-run the fixes`);
+      toast(`Role-assignable group <span>${esc(g.displayName || name)}</span> created — add the resource accounts, then re-run the fixes`);
       await runMsLearn();
     } catch (err) {
       b.disabled = false; b.innerHTML = `➕ Create ${esc(name)} <span class="tag block">writes</span>`;

@@ -2,8 +2,10 @@
 // Persona group templates — extracted from the reference group export
 // (EXAMPLE_Export_groups). Used by the Assign-groups tool to create
 // missing groups directly via Graph. Static groups are ALWAYS created as
-// role-assignable (isAssignableToRole: true); dynamic groups keep their
-// membership rule (Graph does not allow role-assignable + dynamic).
+// role-assignable (isAssignableToRole: true) — always, without exception.
+// Templates marked "dynamic" carry a membership rule for reference, but Graph
+// forbids role-assignable + dynamic membership, so they are created as
+// assigned role-assignable groups and the rule is reported for manual setup.
 // ======================================================================
 const GROUP_TEMPLATES = [
   {
