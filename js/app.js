@@ -2050,6 +2050,16 @@
   }
   $("mlTabFindings").addEventListener("click", () => { mlTab = "findings"; renderMsLearn(); });
   $("mlTabFixes").addEventListener("click", () => { mlTab = "fixes"; renderMsLearn(); });
+  // Refresh: re-read the tenant, then re-run the MS Learn checks.
+  $("mlRefresh").addEventListener("click", async () => {
+    const btn = $("mlRefresh"); btn.disabled = true; btn.textContent = "⟳ Refreshing…";
+    try {
+      if (isDemo) loadDemo(); else await loadFromGraph(true);
+      await openMsLearn();
+      toast("MS Learn checks <span>refreshed</span>");
+    } catch (e) { toast(`Refresh failed: <span>${esc(e.message || e)}</span>`); }
+    finally { btn.disabled = false; btn.textContent = "⟳ Refresh"; }
+  });
 
   // Create a missing convention group (e.g. CAB-SEC-U-SharedDevices) so the
   // dependent fixes stop declining. Role-assignable security group, empty —
