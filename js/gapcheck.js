@@ -528,10 +528,12 @@ const GapCheck = (() => {
         if (!expected.includes(cid)) return { control: cid, status: "na", policies: [] };
         const hit = assigned.filter((p) => isEnabled(p) && det[cid](p));
         const roHit = assigned.filter((p) => isReportOnly(p) && det[cid](p));
-        // A baseline that is fully staged but switched Off is NOT the same as a
-        // missing control — it is designed and deployed, just not enforcing.
-        // Only counted when Off policies are in scope (baseline tenants).
-        const offHit = INCLUDE_DISABLED ? assigned.filter((p) => p.state === "disabled" && det[cid](p)) : [];
+        // A policy that implements the control but sits Off is NOT the same as a
+        // missing control — it is deployed, just not enforcing (a freshly
+        // imported persona is Off by design). Always distinguish the two, so an
+        // existing-but-disabled control reads as "deployed but Off", not
+        // "missing", even outside a recognised baseline tenant.
+        const offHit = assigned.filter((p) => p.state === "disabled" && det[cid](p));
         const status = hit.length ? "present" : roHit.length ? "partial" : offHit.length ? "off" : "missing";
         const persona = label.replace(/^\S+\s*/, "");
         const [, clabel] = CONTROLS.find(([c]) => c === cid);
@@ -541,8 +543,8 @@ const GapCheck = (() => {
             "Add this control to an existing policy for this persona or deploy a dedicated one. Community baselines to compare against: Kenneth van Surksum, Joey Verlinden, Limon-IT.");
         } else if (status === "off") {
           F(out, "low", "Persona Coverage", `${persona}: ${clabel} deployed but Off`, null,
-            `The ${persona} persona has ${offHit.length} policy(ies) implementing "${clabel}", but every one of them is in the Off (disabled) state, so the control is designed and staged yet not enforcing: ${offHit.slice(0, 5).map((p) => p.displayName).join(", ")}${offHit.length > 5 ? ` and ${offHit.length - 5} more` : ""}.`,
-            "This is expected in a baseline/staging tenant. To enforce, switch the policy to Report-only first, review the sign-in impact, then set it to On.");
+            `The ${persona} persona has ${offHit.length} policy(ies) implementing "${clabel}", but every one of them is in the Off (disabled) state, so the control is deployed yet not enforcing: ${offHit.slice(0, 5).map((p) => p.displayName).join(", ")}${offHit.length > 5 ? ` and ${offHit.length - 5} more` : ""}.`,
+            "Expected right after an import (policies land Off) or in a staging tenant. To enforce, switch the policy to Report-only first, review the sign-in impact, then set it to On.");
         }
         const shown = hit.length ? hit : roHit.length ? roHit : offHit;
         return { control: cid, status, policies: shown.map((p) => p.displayName) };
