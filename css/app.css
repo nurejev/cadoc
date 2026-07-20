@@ -432,3 +432,8 @@ table.matrix tbody tr.hl-row > td.hl-col,
 .mtable thead th.hl-col,table.matrix thead th.hl-col,.gc-matrix thead th.hl-col{background-image:linear-gradient(var(--hl2),var(--hl2))}
 .mtable thead th.hl-col .ph,.gc-matrix thead th.hl-col span{color:var(--accent2)}
 .mtable tbody tr.hl-row > td.ucol .uname,.gc-matrix tbody tr.hl-row > th.gc-rh{color:var(--accent2)}
+
+/* select-all control in the policies toolbar */
+.chk.selall{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:7px 13px;font-weight:600;font-size:13px;gap:8px;cursor:pointer;white-space:nowrap}
+.chk.selall:hover{border-color:var(--accent2)}

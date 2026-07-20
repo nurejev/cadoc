@@ -142,6 +142,19 @@
     const n = selected.size;
     $("selCount").textContent = n;
     $("selbar").classList.toggle("visible", n > 0);
+    // "Select all" reflects the visible (filtered) set: checked when all of it
+    // is selected, indeterminate while only part of it is.
+    const vis = visible(), picked = vis.filter(p => selected.has(p.id)).length;
+    const all = $("selAllTop"), listAll = $("selAll");
+    [all, listAll].forEach(cb => {
+      if (!cb) return;
+      cb.checked = vis.length > 0 && picked === vis.length;
+      cb.indeterminate = picked > 0 && picked < vis.length;
+      cb.disabled = vis.length === 0;
+    });
+    $("selAllLabel").textContent = picked && picked === vis.length
+      ? `All ${vis.length} selected`
+      : picked ? `Select all (${picked}/${vis.length})` : `Select all (${vis.length})`;
     $("exportBtn").disabled = policies.length === 0;
     $("analyzeBtn").disabled = policies.length === 0;
     $("refreshBtn").disabled = policies.length === 0;
@@ -1081,7 +1094,7 @@
   $("viewCards").addEventListener("click", () => setView("cards"));
   $("viewList").addEventListener("click", () => setView("list"));
   $("viewMatrix").addEventListener("click", () => setView("matrix"));
-  $("clearSelBtn").addEventListener("click", () => { selected.clear(); refreshViews(); $("selAll").checked = false; });
+  $("clearSelBtn").addEventListener("click", () => { selected.clear(); refreshViews(); });
 
   // list view: name opens detail, checkbox selects, group header collapses/selects group
   document.querySelector("#ptable tbody").addEventListener("click", (e) => {
@@ -1103,11 +1116,13 @@
     cb.checked ? selected.add(cb.dataset.sel) : selected.delete(cb.dataset.sel);
     refreshViews();
   });
-  $("selAll").addEventListener("change", (e) => {
-    // operates on the data (all filtered policies), including collapsed groups
-    visible().forEach(p => e.target.checked ? selected.add(p.id) : selected.delete(p.id));
+  // operates on the data (all filtered policies), including collapsed groups
+  function toggleSelectAll(on) {
+    visible().forEach(p => on ? selected.add(p.id) : selected.delete(p.id));
     refreshViews();
-  });
+  }
+  $("selAll").addEventListener("change", (e) => toggleSelectAll(e.target.checked));
+  $("selAllTop").addEventListener("change", (e) => toggleSelectAll(e.target.checked));
 
   // cards view: checkbox selects, click elsewhere opens detail modal
   $("cardsView").addEventListener("click", (e) => {
