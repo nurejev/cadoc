@@ -32,7 +32,7 @@ The writing actions are always behind an explicit review step and request their 
 - **No PowerShell.** Everything that used to be a script — the impact matrix, group assignment, group creation, state changes, import — is a Graph call from the browser.
 - **Light and dark.** Follows the device by default; the header button cycles Auto → Light → Dark. Exports are always captured in light theme.
 - **No build step.** Vanilla JS, self-hosted libraries, GitHub Pages serves the repo as-is.
-- **Build stamp.** `js/version.js` holds the version, build number and date; the sign-in screen and the footer show it, and the console logs it. The build number matches the `?v=` cache-busting suffix on every asset in `index.html` — bump both together, so a stale deploy or a cached tab is obvious at a glance.
+- **Build stamp.** `js/version.js` holds the app version, build number and date, plus a **per-tool version** shown in the corner of each tile (hover for what that version covers) — so it is clear which tool moved, not just that something did; the sign-in screen and the footer show it, and the console logs it. The build number matches the `?v=` cache-busting suffix on every asset in `index.html` — bump both together, so a stale deploy or a cached tab is obvious at a glance.
 
 ---
 

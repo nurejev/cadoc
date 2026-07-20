@@ -8,8 +8,26 @@
 // ======================================================================
 const APP_BUILD = {
   version: "1.0",
-  build: 83,
+  build: 84,
   date: "2026-07-20",
   get label() { return `v${this.version}.${this.build}`; },
   get full() { return `${this.label} · ${this.date}`; },
+};
+
+// Per-tool versions, keyed by the tile id in index.html. Each tool moves at
+// its own pace, so a tenant-side reviewer can tell which one changed since
+// they last looked without diffing the whole app. Bump the tool you touched.
+const TOOL_VERSIONS = {
+  toolPolicies:     { v: "1.6", note: "cards / list / settings matrix, persona grouping, dependency inspector, full-screen matrix" },
+  toolDocument:     { v: "1.4", note: "Word, PDF, PNG and PNG-bundle export with tenant branding" },
+  toolAnalyze:      { v: "1.3", note: "users × policies impact matrix, group filters, standalone HTML report" },
+  toolGapCheck:     { v: "1.5", note: "bypass checks, persona × control matrix, deployed-but-Off state, Markdown export" },
+  toolExclusions:   { v: "1.3", note: "grouped exclusion sets, effective users, merged matrix rows, CSV and Markdown" },
+  toolBaseline:     { v: "1.3", note: "Limon-IT catalog, card and table views, number-clash detection, collapsible personas" },
+  toolBaselineJoey: { v: "1.1", note: "Joey Verlinden catalog 2026.6.1, verified against commit 38469a4" },
+  toolMsLearn:      { v: "1.6", note: "17 documented checks, 14 buildable fixes, apply-in-tenant with change report" },
+  toolJson:         { v: "1.2", note: "policy zip including dependencies and terms-of-use PDFs" },
+  toolAssign:       { v: "1.2", note: "persona group assignment, role-assignable group creation" },
+  toolState:        { v: "1.0", note: "On / report-only / Off switching" },
+  toolImport:       { v: "1.3", note: "dependencies first, persona remapping, placeholder resolution, change report" },
 };

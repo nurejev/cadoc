@@ -521,3 +521,10 @@ table.matrix tbody tr.hl-row > td.hl-col,
 .build-stamp{margin-top:22px;padding-top:14px;border-top:1px solid var(--border);
   font-size:11px;letter-spacing:.04em;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
 footer #buildStampFoot{color:var(--muted);font-size:12px;font-family:ui-monospace,Consolas,monospace}
+
+/* per-tool version, tucked into the tile corner */
+.tool{position:relative}
+.tool-ver{position:absolute;top:14px;right:16px;font-size:10.5px;letter-spacing:.04em;
+  font-family:ui-monospace,Consolas,monospace;color:var(--muted);background:var(--soft);
+  border:1px solid var(--border);border-radius:999px;padding:2px 8px;cursor:help}
+.tool:hover .tool-ver{border-color:var(--accent2);color:var(--green)}

@@ -54,6 +54,18 @@
     const stamp = $("buildStamp"), foot = $("buildStampFoot");
     if (stamp) stamp.textContent = `${APP_BUILD.label} · ${APP_BUILD.date}`;
     if (foot) foot.textContent = APP_BUILD.label;
+    // per-tool version in the corner of each tile
+    if (typeof TOOL_VERSIONS !== "undefined") {
+      for (const [id, t] of Object.entries(TOOL_VERSIONS)) {
+        const tile = $(id);
+        if (!tile || tile.querySelector(".tool-ver")) continue;
+        const tag = document.createElement("span");
+        tag.className = "tool-ver";
+        tag.textContent = `v${t.v}`;
+        tag.title = t.note ? `${t.note}\n\nApp build ${APP_BUILD.label}` : `App build ${APP_BUILD.label}`;
+        tile.appendChild(tag);
+      }
+    }
     // handy when someone reports a bug from a version you cannot see
     console.info(`CA Doc ${APP_BUILD.full}`);
   })();
