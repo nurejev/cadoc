@@ -18,6 +18,26 @@ const Assign = (() => {
   ];
   // Which actions read a group selection (everything except "All Users").
   const NEEDS_GROUPS = (a) => a !== 4;
+
+  // The baseline personas and the group that represents each. Lets the wizard
+  // offer "pick by persona" instead of hunting for the exact group name — and
+  // create it from a template if the tenant does not have it yet. Order matches
+  // the CA-number ranges the rest of the app groups by.
+  const PERSONAS = [
+    { key: "global", label: "🌐 Global", group: null },  // no single persona group; global policies use All-users − exclusions
+    { key: "admins", label: "🛡 Admins", group: "CAB-SEC-U-Persona-Admins" },
+    { key: "internals", label: "👤 Internals", group: "CAB-SEC-U-Persona-Internals" },
+    { key: "externals", label: "🤝 Externals", group: "CAB-SEC-U-Persona-Externals" },
+    { key: "guestusers", label: "👥 Guest users", group: "CAB-SEC-U-Persona-GuestUsers" },
+    { key: "guestadmins", label: "🔑 Guest admins", group: "CAB-SEC-U-Persona-GuestAdmins" },
+    { key: "serviceaccounts", label: "⚙ M365 service accounts", group: "CAB-SEC-U-Persona-Microsoft365ServiceAccounts" },
+    { key: "devops", label: "🧰 DevOps", group: "CAB-SEC-U-Persona-DevOps" },
+    { key: "breakglass", label: "🚨 Break-glass", group: "CAB-SEC-U-BreakGlass" },
+  ];
+  // Only personas that map to a real group can be picked directly.
+  const personasWithGroup = () => PERSONAS.filter((p) => p.group);
+  const templateFor = (name) => templates().find((t) => t.displayName === name)
+    || { displayName: name, mailNickname: name.replace(/[^A-Za-z0-9]/g, "") };
   // Which actions only ever remove — safe to run tenant-wide without the ALL
   // guard, like ADD-to-exclude, because they never rewrite what stays.
   const REMOVE_ACTIONS = new Set([5, 6]);
@@ -200,5 +220,5 @@ const Assign = (() => {
     return results;
   }
 
-  return { ACTIONS, NEEDS_GROUPS, REMOVE_ACTIONS, PREDEFINED, findGroup, searchGroups, resolveGroups, newUsersBlock, apply, buildGroupPayload, createGroup, templates };
+  return { ACTIONS, NEEDS_GROUPS, REMOVE_ACTIONS, PERSONAS, personasWithGroup, templateFor, PREDEFINED, findGroup, searchGroups, resolveGroups, newUsersBlock, apply, buildGroupPayload, createGroup, templates };
 })();

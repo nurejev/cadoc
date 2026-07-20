@@ -123,6 +123,10 @@ table.plist tr:hover td{background:var(--hover)}
 .cg-table .tag{font-size:10px;padding:1px 6px}
 .cg-mem{white-space:nowrap}
 .btn.sm{padding:3px 10px;font-size:11px;border-radius:8px}
+/* persona quick-pick in the assign wizard */
+.persona-row{display:flex;flex-wrap:wrap;gap:6px}
+.persona-chip{background:var(--soft);border-color:var(--border)}
+.persona-chip.on{background:var(--lemon);border-color:var(--lemon-deep);color:var(--green-deep)}
 .cg-table .cg-ic{text-align:center;font-weight:700}
 .cg-ic.ok{color:var(--on)} .cg-ic.bad{color:var(--off)} .cg-ic.warn{color:var(--report)} .cg-ic.info{color:var(--na)}
 .cg-row{cursor:pointer}

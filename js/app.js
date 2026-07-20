@@ -1243,7 +1243,17 @@
         ).map(g => ({ ...g, checked: false }));
       }
       const tpls = Assign.templates().filter(t => !asGroups.some(g => g.name === t.displayName));
-      b.innerHTML = `<h4 class="mini" style="margin-bottom:8px">TARGET GROUPS</h4>` +
+      // Pick by persona: one click adds that persona's group, creating it from
+      // its template first if the tenant does not have it. A persona already in
+      // the target list is marked so it is obvious it is covered.
+      const personaChips = Assign.personasWithGroup().map(p => {
+        const on = asGroups.some(g => g.name === p.group && g.checked);
+        return `<button class="btn sm persona-chip ${on ? "on" : ""}" data-asPersona="${esc(p.group)}" title="${esc(p.group)}">${esc(p.label)}${on ? " ✓" : ""}</button>`;
+      }).join("");
+      b.innerHTML = `<h4 class="mini" style="margin-bottom:8px">BY PERSONA</h4>
+        <p class="mini muted" style="margin-bottom:6px">Add the group for a persona — created from its baseline template if it is missing.</p>
+        <div class="persona-row">${personaChips}</div>
+        <h4 class="mini" style="margin:16px 0 8px">TARGET GROUPS</h4>` +
         (asGroups.map((g, i) => `<label class="chk" style="margin:5px 0"><input type="checkbox" data-asg="${i}" ${g.checked ? "checked" : ""}> ${assignEsc(g.name)}${g.created ? ' <span class="tag grant">created</span>' : ""}</label>`).join("") || '<p class="mini">No predefined persona groups found in this tenant yet — create them from a template below.</p>') +
         `<h4 class="mini" style="margin:16px 0 6px">ANY OTHER GROUP</h4>
         <div style="display:flex;gap:8px">
@@ -1319,6 +1329,25 @@
     renderAssign();
   }
   $("asBody").addEventListener("click", async (e) => {
+    const pc = e.target.closest("[data-asPersona]");
+    if (pc) {
+      const name = pc.dataset.asPersona;
+      // already in the list? just tick it, no Graph call
+      const existing = asGroups.find(g => g.name === name);
+      if (existing) { existing.checked = true; renderAssign(); return; }
+      pc.disabled = true;
+      try {
+        // Resolve it; create from template only if it does not exist.
+        let g = isDemo ? { id: "g-" + name, name } : await Assign.findGroup(name);
+        if (!g) {
+          if (!await preConsent([...AUTH_CONFIG.scopes, "Group.ReadWrite.All", "RoleManagement.ReadWrite.Directory"])) { pc.disabled = false; return; }
+          g = isDemo ? { id: "g-" + name, name, created: true } : await Assign.createGroup(Assign.templateFor(name));
+          toast(g.created ? `Created <span>${esc(name)}</span>` : `<span>${esc(name)}</span> reused`);
+        }
+        asAddCreated(g);
+      } catch (err) { console.error(err); toast(`Persona group failed: <span>${esc(err.message || err)}</span>`); pc.disabled = false; }
+      return;
+    }
     if (e.target.id === "asCustomAdd") {
       const q = $("asCustom").value.trim(); if (!q) return;
       e.target.disabled = true; e.target.textContent = "Searching…";
