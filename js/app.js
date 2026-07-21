@@ -1861,8 +1861,11 @@
   // ---------- Baseline Policies ----------
   // Pure client-side comparison against the bundled catalog — no Graph calls
   // beyond the policies already loaded, so it is instant and re-runs on filter.
-  let blResult = null, blFilter = "all", blQuery = "", blView = "cards", blCat = "limonit";
+  let blResult = null, blFilter = "all", blQuery = "", blView = "table", blCat = "limonit";
   const blCollapsed = new Set();
+  // the Limon-IT R26.6 catalog is large — the table is the readable default;
+  // the community catalogs open as cards
+  const blDefaultView = (cat) => (cat === "limonit" ? "table" : "cards");
   // keepView: a refresh re-compares in place and must not throw away the filter,
   // search or collapsed sections the person was looking at.
   function openBaseline(catId, keepView) {
@@ -1875,7 +1878,7 @@
     }
     blResult = Baseline.compare(policies, blCat);
     if (!keepView) {
-      blFilter = "all"; blQuery = ""; blView = "cards"; blCollapsed.clear(); $("blSearch").value = "";
+      blFilter = "all"; blQuery = ""; blView = blDefaultView(blCat); blCollapsed.clear(); $("blSearch").value = "";
     }
     renderBaseline();
   }
@@ -1900,7 +1903,7 @@
     const b = e.target.closest("[data-blcat]"); if (!b || b.dataset.blcat === blCat) return;
     blCat = b.dataset.blcat;
     blResult = Baseline.compare(policies, blCat);
-    blFilter = "all"; blCollapsed.clear(); renderBaseline();
+    blFilter = "all"; blView = blDefaultView(blCat); blCollapsed.clear(); renderBaseline();
   });
   $("blChips").addEventListener("click", (e) => {
     const b = e.target.closest("[data-blf]"); if (!b) return;
