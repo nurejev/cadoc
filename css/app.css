@@ -31,7 +31,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);position:
 .app-tag{background:var(--soft);color:var(--green);font-weight:600;font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--border)}
 /* tool tab bar — sticky under the header. The inner strip is centred and
    aligned to the card width, so tabs open outward from the middle. */
-.toolnav{position:sticky;top:57px;z-index:45;background:var(--surface);border-bottom:1px solid var(--border);padding:6px 0}
+.toolnav{position:sticky;top:58px;z-index:45;background:var(--surface);border-bottom:1px solid var(--border);padding:6px 0}
 .toolnav-inner{max-width:1180px;margin:0 auto;padding:0 24px;display:flex;gap:4px;align-items:center;
   justify-content:center;overflow-x:auto;scrollbar-width:thin}
 .toolnav-inner::-webkit-scrollbar{height:6px}
@@ -85,7 +85,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 24px 80px}
 /* One toolbar shape for every tool: search / filters / view switch on the left,
    actions in a right-aligned group that wraps as a unit instead of scattering. */
 .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:10px;
-  position:sticky;top:58px;z-index:40;background:var(--bg);
+  position:sticky;top:106px;z-index:40;background:var(--bg);
   padding:12px 0;margin:-12px 0 6px;box-shadow:0 6px 12px -8px rgba(18,51,31,.15)}
 .tb-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto}
 .toolbar > .chk{margin:0}
@@ -120,7 +120,11 @@ table.plist tr:hover td{background:var(--hover)}
 .state.on{background:var(--ok-bg);color:var(--on)}
 .state.off{background:var(--bad-bg);color:var(--off)}
 .state.report{background:var(--warn-bg);color:var(--report)}
-.selbar{display:none;align-items:center;gap:12px;background:var(--green-deep);color:#fff;border-radius:12px;padding:10px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+/* stays put while you scroll and select — sticks just under the sticky toolbar
+   (header 58 + tab bar 48 + toolbar ~62). z-index below the toolbar so the two
+   never fight if the toolbar wraps on a narrow width. */
+.selbar{display:none;align-items:center;gap:12px;background:var(--green-deep);color:#fff;border-radius:12px;padding:10px 16px;margin-bottom:14px;box-shadow:var(--shadow);
+  position:sticky;top:168px;z-index:39}
 .selbar.visible{display:flex}
 .selbar b{color:var(--lemon)}
 .selhint{color:var(--on-deep-mute)}
