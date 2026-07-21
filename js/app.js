@@ -2255,7 +2255,7 @@
   // ---------- CA validator (simulation report) ----------
   // A read-only port of the simulation generator from Jasper Baes' Conditional
   // Access Validator (https://github.com/jasperbaes/Conditional-Access-Validator).
-  let vaResult = null, vaFilter = "all", vaQuery = "", vaReportOnly = false;
+  let vaResult = null, vaFilter = "all", vaQuery = "", vaReportOnly = false, vaTargetObj = null;
   const vaCollapsed = new Set();
   const isGuid = (s) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || "");
 
@@ -2315,14 +2315,55 @@
     $("vaHead").innerHTML = '<h3>⚡ CA validator</h3><p class="mini" style="margin:6px 0 0">Generating simulations…</p>';
     $("vaChips").innerHTML = ""; $("vaBody").innerHTML = ""; vaFilter = "all"; vaQuery = ""; $("vaSearch").value = ""; vaCollapsed.clear();
     $("vaReportOnly").checked = vaReportOnly;
+    $("vaTargetClear").style.display = vaTargetObj ? "" : "none";
     try {
       const names = await buildValidatorNames(vaReportOnly);
-      vaResult = Validator.simulate(policies.map((p) => p.raw), { names, includeReportOnly: vaReportOnly });
+      vaResult = Validator.simulate(policies.map((p) => p.raw), { names, includeReportOnly: vaReportOnly, target: vaTargetObj });
       renderValidator();
     } catch (e) {
       console.error("CA validator failed:", e);
       $("vaHead").innerHTML = `<h3>⚡ CA validator</h3><p class="mini" style="color:var(--off)">Failed: ${esc(e.message || e)}</p>`;
     }
+  }
+
+  // Resolve the free-text target into a group persona or a user (with the
+  // user's transitive group + role memberships, so policy scope can be judged).
+  async function resolveValidatorTarget(text) {
+    const t = (text || "").trim();
+    if (!t) return null;
+    const guid = isGuid(t);
+    if (isDemo) {   // best-effort against demo data
+      const dn = (typeof DEMO_DATA !== "undefined" && DEMO_DATA.names) || {};
+      const byName = Object.keys(dn).find((id) => (dn[id] || "").toLowerCase() === t.toLowerCase());
+      const id = guid ? t : byName;
+      if (!id) throw new Error(`"${t}" not found in the demo data`);
+      return { kind: "group", id, name: dn[id] || t };
+    }
+    if (t.includes("@")) {   // a UPN → user
+      const u = await Graph.gget(`/users/${encodeURIComponent(t)}?$select=id,displayName,userPrincipalName`);
+      return await userTarget(u);
+    }
+    if (guid) {              // GUID → try group, then user
+      try { const g = await Graph.gget(`/groups/${t}?$select=id,displayName`); return { kind: "group", id: g.id, name: g.displayName || t }; }
+      catch { const u = await Graph.gget(`/users/${t}?$select=id,displayName,userPrincipalName`); return await userTarget(u); }
+    }
+    // plain text → group by display name (exact)
+    const esc2 = t.replace(/'/g, "''");
+    const res = await Graph.ggetAll(`/groups?$filter=displayName eq '${esc2}'&$select=id,displayName`);
+    if (!res.length) throw new Error(`No group named "${t}" — use an exact group name, a group ID, or a user UPN (with @)`);
+    return { kind: "group", id: res[0].id, name: res[0].displayName };
+  }
+  async function userTarget(u) {
+    const groupIds = new Set(), roleIds = new Set();
+    try {
+      const mem = await Graph.ggetAll(`/users/${u.id}/transitiveMemberOf?$select=id,roleTemplateId`);
+      mem.forEach((o) => {
+        const ty = (o["@odata.type"] || "").toLowerCase();
+        if (ty.includes("directoryrole")) { if (o.roleTemplateId) roleIds.add(o.roleTemplateId); }
+        else groupIds.add(o.id);
+      });
+    } catch (e) { console.warn("validator: membership lookup failed", e.message); }
+    return { kind: "user", id: u.id, name: u.displayName || u.userPrincipalName, upn: u.userPrincipalName, groupIds, roleIds };
   }
 
   const VA_CTRL_ORDER = ["block", "mfa", "authenticationStrength", "compliantDevice", "domainJoinedDevice", "passwordChange"];
@@ -2337,9 +2378,11 @@
       </div>
       <div style="text-align:right">
         <div style="font-size:26px;font-weight:700">${r.simCount}<span class="mini" style="font-weight:400"> simulations</span></div>
-        <div class="mini">${r.simulatedPolicies} of ${r.policyCount} policies simulated</div>
+        <div class="mini">${r.simulatedPolicies} of ${r.policyCount} policies ${r.target ? "apply" : "simulated"}</div>
+        ${r.target ? `<div class="mini">${r.outOfScope} not in scope for this target</div>` : ""}
         ${r.skipped.length ? `<div class="mini">${r.skipped.length} skipped (session-only / no controls)</div>` : ""}
-      </div></div>`;
+      </div></div>
+      ${r.target ? `<div class="va-targetbar">🎯 Running against ${r.target.kind === "user" ? "user" : "persona group"} <b>${esc(r.target.name)}</b>${r.target.upn ? ` <span class="mini muted">${esc(r.target.upn)}</span>` : ""} — showing only the policies that apply. <button class="fchip" data-vacleartarget="1">✕ Clear</button></div>` : ""}`;
 
     // control filter chips
     const counts = {};
@@ -2355,7 +2398,12 @@
       return { ...g, shown: sims };
     }).filter((g) => g.shown.length);
 
-    if (!groups.length) { $("vaBody").innerHTML = '<p class="mini" style="padding:20px">No simulations match the current filter.</p>'; return; }
+    if (!groups.length) {
+      $("vaBody").innerHTML = (r.target && r.simulatedPolicies === 0)
+        ? `<p class="mini" style="padding:20px">No enabled policy applies to <b>${esc(r.target.name)}</b>${vaReportOnly ? "" : " — tick “Include report-only” to widen the check"}.</p>`
+        : '<p class="mini" style="padding:20px">No simulations match the current filter.</p>';
+      return;
+    }
     const stateTag = (st) => st === "enabledForReportingButNotEnforced" ? '<span class="tag">report-only</span>' : "";
     const cell = (v) => v && v !== "All" ? esc(v) : '<span class="muted">·</span>';
     $("vaBody").innerHTML = groups.map((g) => {
@@ -2390,7 +2438,8 @@
     const L = [`# Conditional Access validation — ${tenantName || "tenant"}`, "",
       `Generated ${new Date().toISOString().replace("T", " ").slice(0, 16)} UTC by Conditional Access Baseline Tools (cadoc.limon-it.nl).`, "",
       `Simulation generator ported from [Jasper Baes' Conditional Access Validator](https://github.com/jasperbaes/Conditional-Access-Validator) (CC BY-NC-SA 4.0).`, "",
-      `- Policies simulated: **${r.simulatedPolicies}** of ${r.policyCount}`, `- Simulations: **${r.simCount}**`,
+      ...(r.target ? [`**Target:** ${r.target.kind === "user" ? "user" : "persona group"} ${r.target.name}${r.target.upn ? ` (${r.target.upn})` : ""} — only the policies that apply are shown (${r.outOfScope} not in scope).`, ""] : []),
+      `- Policies ${r.target ? "applying" : "simulated"}: **${r.simulatedPolicies}** of ${r.policyCount}`, `- Simulations: **${r.simCount}**`,
       ...(r.skipped.length ? [`- Skipped (session-only / no controls): ${r.skipped.map((s) => s.name).join(", ")}`] : []), ""];
     for (const g of r.groups) {
       L.push(`## ${g.name}${g.state === "enabledForReportingButNotEnforced" ? " *(report-only)*" : ""}`, "");
@@ -2423,6 +2472,23 @@
   $("vaReportOnly").addEventListener("change", (e) => { vaReportOnly = e.target.checked; openValidator(); });
   $("vaRefresh").addEventListener("click", async () => { if (!isDemo) await loadFromGraph(true); openValidator(); });
   $("vaMd").addEventListener("click", () => { if (!vaResult) return; showReport("⚡ CA validation report", "CA-Validation", vaMarkdown()); });
+  // Target: run the simulation against one persona group or user
+  async function vaRunTarget() {
+    const text = $("vaTarget").value.trim();
+    if (!text) { vaTargetObj = null; openValidator(); return; }
+    $("vaTargetGo").disabled = true; $("vaTargetGo").textContent = "…";
+    try {
+      vaTargetObj = await resolveValidatorTarget(text);
+      $("vaTarget").value = vaTargetObj.upn || vaTargetObj.name;
+      openValidator();
+    } catch (e) { toast(`Target: <span>${esc(e.message || e)}</span>`); }
+    finally { $("vaTargetGo").disabled = false; $("vaTargetGo").textContent = "Run"; }
+  }
+  $("vaTargetGo").addEventListener("click", vaRunTarget);
+  $("vaTarget").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); vaRunTarget(); } });
+  function vaClearTarget() { vaTargetObj = null; $("vaTarget").value = ""; openValidator(); }
+  $("vaTargetClear").addEventListener("click", vaClearTarget);
+  $("vaHead").addEventListener("click", (e) => { if (e.target.closest("[data-vacleartarget]")) vaClearTarget(); });
 
   // ---------- MS Learn documented exclusion checks ----------
   let mlGroups = null, mlFilter = "all", mlStrengths = new Map(), mlFixes = null, mlTab = "findings";

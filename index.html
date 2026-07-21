@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=142">
+<link rel="stylesheet" href="css/app.css?v=143">
 </head>
 <body>
 
@@ -164,6 +164,8 @@
         <li><b>Conditional Access Impact Matrix</b> — by <b>Jasper Baes</b>. The users × policies impact model behind the
           <b>Gap analyse</b> tool: working out which policies actually apply to a given user, who bypasses a policy through an
           exclusion, and whether that bypass is covered somewhere else.</li>
+        <li><b><a href="https://github.com/jasperbaes/Conditional-Access-Validator" target="_blank" rel="noopener noreferrer">Conditional Access Validator</a></b> — by <b>Jasper Baes</b>, part of his Conditional Access Blueprint.
+          The simulation generator behind the <b>CA validator</b> tool: deriving, per policy, the sign-in scenarios it implies and the control each one should (or should not) enforce. Reimplemented here as a report only (no Maester test-code generation). Licensed <b>CC BY-NC-SA 4.0</b>.</li>
         <li><b>Conditional Access Baseline</b> — by <b>Joey Verlinden</b>. A minimised community baseline on top of the Microsoft
           Conditional Access framework, included here as a second catalog in <b>Baseline Policies</b> so a tenant can be measured
           against it the same way. The policy set and naming convention are his; these tools only read and compare.</li>
@@ -442,6 +444,11 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
         <input id="vaSearch" placeholder="Search policy or simulation…" autocomplete="off">
       </div>
+      <div class="va-target">
+        <input id="vaTarget" placeholder="Run against a user (UPN) or group name / ID… (optional)" autocomplete="off" spellcheck="false">
+        <button class="btn sm" id="vaTargetGo">Run</button>
+        <button class="btn sm" id="vaTargetClear" title="Clear target — simulate every policy" style="display:none">✕</button>
+      </div>
       <div class="chip-filter" id="vaChips"></div>
       <label class="chk" id="vaROWrap" style="margin:0"><input type="checkbox" id="vaReportOnly"> Include report-only policies</label>
       <div class="tb-actions">
@@ -513,6 +520,7 @@
       <p>For each enabled policy, the sign-in <b>simulations</b> it implies — the combinations of user, application, client app, location, device platform and risk it targets — and, per grant control, the control each one should enforce.</p>
       <ul>
         <li><b>Expected control</b> — every simulation shows the control the policy would require (MFA, Block, Compliant device, …). When the principal, app, location or platform is on the <b>excluded</b> side, the expectation inverts to <b>“no &lt;control&gt;”</b> — proving the policy does not fire there.</li>
+        <li><b>Run against a target</b> — optionally enter a <b>user</b> (UPN) or a <b>persona group</b> (name or ID) to scope the report to only the policies that actually apply to that principal (include minus exclude); for a user, their group and role memberships are evaluated. Leave empty to simulate every policy.</li>
         <li><b>Include report-only</b> — off by default; tick it to also simulate policies in report-only mode.</li>
         <li><b>Filter &amp; search</b> — filter by expected control, or search by policy or simulation text; collapse/expand all policies.</li>
         <li>Users are shown as <b>representative placeholders</b> (“all users”, “members of &lt;group&gt;”, “role: …”) — no individual accounts are sampled. Session-only policies are listed as having nothing to assert.</li>
@@ -855,27 +863,27 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/version.js?v=142"></script>
-<script src="js/authConfig.js?v=142"></script>
-<script src="js/labels.js?v=142"></script>
-<script src="js/graph.js?v=142"></script>
-<script src="js/model.js?v=142"></script>
-<script src="js/render.js?v=142"></script>
-<script src="js/analyze.js?v=142"></script>
-<script src="js/whatif.js?v=142"></script>
-<script src="js/mslearn.js?v=142"></script>
-<script src="js/gapcheck.js?v=142"></script>
-<script src="js/exclusions.js?v=142"></script>
-<script src="js/validator.js?v=142"></script>
-<script src="js/baselineData.js?v=142"></script>
-<script src="js/baselineJoeyData.js?v=142"></script>
-<script src="js/baseline.js?v=142"></script>
-<script src="js/groupTemplates.js?v=142"></script>
-<script src="js/assign.js?v=142"></script>
-<script src="js/cagroups.js?v=142"></script>
-<script src="js/import.js?v=142"></script>
-<script src="js/export.js?v=142"></script>
-<script src="js/demo.js?v=142"></script>
-<script src="js/app.js?v=142"></script>
+<script src="js/version.js?v=143"></script>
+<script src="js/authConfig.js?v=143"></script>
+<script src="js/labels.js?v=143"></script>
+<script src="js/graph.js?v=143"></script>
+<script src="js/model.js?v=143"></script>
+<script src="js/render.js?v=143"></script>
+<script src="js/analyze.js?v=143"></script>
+<script src="js/whatif.js?v=143"></script>
+<script src="js/mslearn.js?v=143"></script>
+<script src="js/gapcheck.js?v=143"></script>
+<script src="js/exclusions.js?v=143"></script>
+<script src="js/validator.js?v=143"></script>
+<script src="js/baselineData.js?v=143"></script>
+<script src="js/baselineJoeyData.js?v=143"></script>
+<script src="js/baseline.js?v=143"></script>
+<script src="js/groupTemplates.js?v=143"></script>
+<script src="js/assign.js?v=143"></script>
+<script src="js/cagroups.js?v=143"></script>
+<script src="js/import.js?v=143"></script>
+<script src="js/export.js?v=143"></script>
+<script src="js/demo.js?v=143"></script>
+<script src="js/app.js?v=143"></script>
 </body>
 </html>

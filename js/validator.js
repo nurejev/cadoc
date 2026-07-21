@@ -126,12 +126,41 @@ const Validator = (() => {
 
   const PER_POLICY_CAP = 400;   // safety valve against a huge cartesian product
 
-  function simulatePolicy(p, names) {
+  // Does a policy apply to a specific target (a group/persona or a user)?
+  // target: { kind:"group", id, name } | { kind:"user", id, name, upn, groupIds:Set, roleIds:Set }
+  function appliesTo(p, target) {
+    const u = p.conditions?.users || {};
+    const incU = new Set(u.includeUsers || []), excU = new Set(u.excludeUsers || []);
+    const incG = new Set(u.includeGroups || []), excG = new Set(u.excludeGroups || []);
+    const incR = new Set(u.includeRoles || []), excR = new Set(u.excludeRoles || []);
+    let included = false, excluded = false;
+    if (target.kind === "group") {
+      included = incU.has("All") || incG.has(target.id);
+      excluded = excG.has(target.id);
+    } else {
+      const gids = target.groupIds || new Set(), rids = target.roleIds || new Set();
+      included = incU.has("All") || incU.has(target.id) || [...incG].some((x) => gids.has(x)) || [...incR].some((x) => rids.has(x));
+      excluded = excU.has(target.id) || [...excG].some((x) => gids.has(x)) || [...excR].some((x) => rids.has(x));
+    }
+    return { applies: included && !excluded, included, excluded };
+  }
+
+  function simulatePolicy(p, names, target) {
     const c = p.conditions || {}, g = p.grantControls || {};
     const controls = controlsFor(g);
     if (!controls.length) return { sims: [], skipped: "session-only (no grant control to assert)" };
 
-    const users = usersFor(c.users || {}, names);
+    let users;
+    if (target) {
+      const ap = appliesTo(p, target);
+      if (!ap.applies) return { sims: [], outOfScope: true, excluded: ap.excluded };
+      // the target is in scope → represent it as the single included principal
+      users = [target.kind === "group"
+        ? { upn: "members of " + target.name, type: "included", kind: "group" }
+        : { upn: target.upn || target.name, type: "included", kind: "user" }];
+    } else {
+      users = usersFor(c.users || {}, names);
+    }
     if (!users.length) return { sims: [], skipped: "no user assignment resolved" };
     const apps = appsFor(c.applications || {}, names);
     const clients = (!c.clientAppTypes || c.clientAppTypes.includes("all")) ? CLIENT_ALL : c.clientAppTypes;
@@ -170,12 +199,15 @@ const Validator = (() => {
   function simulate(rawPolicies, opts = {}) {
     const names = opts.names || NAMES;
     const includeReportOnly = !!opts.includeReportOnly;
+    const target = opts.target || null;
     const eligible = rawPolicies.filter((p) =>
       p.state === "enabled" || (includeReportOnly && p.state === "enabledForReportingButNotEnforced"));
 
     const groups = [], all = [], skipped = [];
+    let outOfScope = 0;
     for (const p of eligible.slice().sort((a, b) => (a.displayName || "").localeCompare(b.displayName || ""))) {
-      const r = simulatePolicy(p, names);
+      const r = simulatePolicy(p, names, target);
+      if (r.outOfScope) { outOfScope++; continue; }
       if (r.skipped) { skipped.push({ name: p.displayName, reason: r.skipped }); continue; }
       groups.push({ id: p.id, name: p.displayName, state: p.state, sims: r.sims, capped: r.capped });
       all.push(...r.sims);
@@ -184,6 +216,8 @@ const Validator = (() => {
       policyCount: eligible.length,
       simulatedPolicies: groups.length,
       simCount: all.length,
+      target: target ? { kind: target.kind, name: target.name, upn: target.upn } : null,
+      outOfScope,
       groups, sims: all, skipped,
       controlCounts: all.reduce((m, s) => { const k = (s.inverted ? "no " : "") + s.expectedControl; m[k] = (m[k] || 0) + 1; return m; }, {}),
     };
@@ -206,5 +240,5 @@ const Validator = (() => {
     return { users: [...refs.users], groups: [...refs.groups], roles: [...refs.roles], apps: [...refs.apps], locations: [...refs.locations] };
   }
 
-  return { simulate, collectRefs, CONTROL_LABEL, clientLabel };
+  return { simulate, appliesTo, collectRefs, CONTROL_LABEL, clientLabel };
 })();
