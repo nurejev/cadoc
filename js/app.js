@@ -877,10 +877,10 @@
   });
 
   // ---------- import tool (BETA) ----------
-  let imBundle = null, imPlan = null, imFileName = "";
+  let imBundle = null, imPlan = null, imFileName = "", imMode = "deploy";
   $("toolImport").addEventListener("click", () => {
     crumb("📥 Import");
-    imBundle = null; imPlan = null;
+    imBundle = null; imPlan = null; imMode = "deploy";
     $("imBody").innerHTML = ""; $("imGo").style.display = "none"; $("imPick").style.display = "flex";
     $("imDesc").textContent = "Select a CA Doc backup zip, or pick the extracted backup folder — both use the same structure.";
     $("importModal").classList.add("open");
@@ -899,10 +899,21 @@
 
   async function imLoaded(bundle, fileName) {
     imBundle = bundle; imFileName = fileName;
-    imPlan = Importer.plan(bundle, policies.map(p => p.name));
+    // pass the tenant's raw policies (not just names) so "match & replace" can
+    // read the current assignment and id of a policy it supersedes
+    imPlan = Importer.plan(bundle, policies.map(p => p.raw));
     const dep = ["groups", "namedLocations", "authStrengths", "authContexts", "termsOfUse"].map(k => `${bundle[k].length} ${k}`).join(", ");
-    const importable = imPlan.filter(p => !p.exists);
     $("imDesc").textContent = `${fileName}: ${bundle.policies.length} policies, dependencies: ${dep}.`;
+    imRenderList();
+    $("imPick").style.display = "none";
+  }
+
+  // Rebuilds the plan list — called on load and whenever the assignment mode
+  // toggles, since the per-row hint depends on the mode.
+  function imRenderList() {
+    const importable = imPlan.filter(p => !p.exists);
+    const nUpg = imPlan.filter(p => p.upgrade).length;
+    const replace = imMode === "replace";
 
     // Persona filter: how many importable policies each persona has, so you can
     // bring in just one persona's set from a whole-tenant backup.
@@ -912,9 +923,23 @@
     const chips = [...counts.keys()].sort((a, b) => order.indexOf(a) - order.indexOf(b))
       .map(k => `<button class="btn sm persona-chip" data-im-persona="${esc(k)}">${esc(imPersonaLabel(k))} (${counts.get(k)})</button>`).join("");
 
+    const rowHint = (p) => {
+      if (p.exists) return esc(p.reason);
+      if (p.upgrade) return replace
+        ? `♻️ replaces the current v${esc(p.existing.ver)} — assignment kept, old policy switched Off`
+        : `→ ${esc(p.personaGroup || "")} · <span style="color:var(--muted)">current v${esc(p.existing.ver)} stays as-is</span>`;
+      if (p.personaGroup) return `→ ${esc(p.personaGroup)}`;
+      return esc(p.reason || "");
+    };
+
     $("imBody").innerHTML = `
-      <p class="mini" style="margin:8px 0">Dependencies are imported first (create-if-missing). Policies are imported in state <b>Off</b>,
-      skipped when a policy with the same CA number + version already exists, and their INCLUDE assignment is remapped to the deploy persona group (CAD-SEC-U-DG-*).${isDemo ? " <b>Demo — simulated.</b>" : ""}</p>
+      <div class="im-mode" role="radiogroup" aria-label="Assignment mode">
+        <label class="im-mode-opt${!replace ? " on" : ""}"><input type="radio" name="imMode" value="deploy" ${!replace ? "checked" : ""}>
+          <b>🚀 Deployment groups</b><span class="mini">Includes remapped to the deploy persona group (CAD-SEC-U-DG-*) — staged, nothing existing is touched.</span></label>
+        <label class="im-mode-opt${replace ? " on" : ""}"><input type="radio" name="imMode" value="replace" ${replace ? "checked" : ""}>
+          <b>♻️ Match &amp; replace</b><span class="mini">A policy already in this tenant keeps its current assignment; its old version is switched Off.${nUpg ? ` ${nUpg} match${nUpg === 1 ? "es" : "es"} here.` : " No matches in this file."}</span></label>
+      </div>
+      <p class="mini" style="margin:8px 0">Dependencies are imported first (create-if-missing). Policies always land in state <b>Off</b>, and one with the same CA number + version is skipped.${isDemo ? " <b>Demo — simulated.</b>" : ""}</p>
       <p class="mini" style="margin:6px 0 4px"><b>Import only:</b> pick a persona to select just its policies, or use All / None.</p>
       <div class="persona-row" style="margin-bottom:10px">
         <button class="btn sm" data-im-persona="__all">All (${importable.length})</button>
@@ -924,12 +949,11 @@
       <ul class="plist2" style="border:1px solid var(--border);border-radius:8px">` +
       imPlan.map((p, i) => `<li data-imrow="${i}" data-imkey="${esc(imPersonaKey(p))}"><label class="chk" style="margin:0">
         <input type="checkbox" data-imp="${i}" ${p.exists ? "disabled" : "checked"}>
-        ${p.exists ? '<span class="tag">skip</span>' : p.asIs ? '<span class="tag new">as-is</span>' : `<span class="tag grant">import</span>`}
+        ${p.exists ? '<span class="tag">skip</span>' : p.upgrade ? '<span class="tag grant">update</span>' : p.asIs ? '<span class="tag new">as-is</span>' : `<span class="tag grant">import</span>`}
         ${p.needsTou ? '<span class="tag block" title="Grants a Terms of use — create the ToU in the portal first, then re-import; it imports now without that control">📜 needs ToU</span>' : ""}
         ${esc(p.name)}
-        <span class="mini">${p.exists ? esc(p.reason) : p.personaGroup ? `→ ${esc(p.personaGroup)}` : esc(p.reason || "")}${p.needsTou && !p.exists ? ' · <span style="color:var(--off)">imports without the Terms of use until you create it</span>' : ""}</span>
+        <span class="mini">${rowHint(p)}${p.needsTou && !p.exists ? ' · <span style="color:var(--off)">imports without the Terms of use until you create it</span>' : ""}</span>
       </label></li>`).join("") + "</ul>";
-    $("imPick").style.display = "none";
     $("imGo").style.display = importable.length ? "inline-flex" : "none";
     updateImGo();
   }
@@ -964,7 +988,10 @@
       return;
     }
   });
-  $("imBody").addEventListener("change", (e) => { if (e.target.matches("[data-imp]")) updateImGo(); });
+  $("imBody").addEventListener("change", (e) => {
+    if (e.target.matches('input[name="imMode"]')) { imMode = e.target.value; imRenderList(); return; }
+    if (e.target.matches("[data-imp]")) updateImGo();
+  });
   $("imZip").addEventListener("change", async (e) => {
     const f = e.target.files[0]; if (!f) return;
     try { await imLoaded(await Importer.readZip(f), f.name); }
@@ -988,18 +1015,23 @@
       // Only build the dependencies the CHOSEN policies need — importing one
       // persona should not create every group in a whole-tenant backup.
       const scoped = Importer.scopeBundle(imBundle, chosen.map(p => p.raw));
+      // policies that will be replaced in place don't need a deploy group made
+      const matchedNames = imMode === "replace" ? chosen.filter(p => p.upgrade).map(p => p.name) : [];
       if (isDemo) {
-        chosen.forEach(p => { if (p.personaGroup) maps.personaGroupIds[p.personaGroup] = "g-" + p.personaGroup; });
-        res.results = chosen.map(p => ({ name: p.name, ok: true, persona: p.persona, personaGroup: p.personaGroup }));
+        chosen.forEach(p => { if (p.personaGroup && !matchedNames.includes(p.name)) maps.personaGroupIds[p.personaGroup] = "g-" + p.personaGroup; });
+        res.results = chosen.map(p => {
+          const matched = imMode === "replace" && p.upgrade;
+          return { name: p.name, ok: true, persona: p.persona, personaGroup: matched ? null : p.personaGroup, matched, disabledOld: matched, oldName: matched ? p.existing?.name : null };
+        });
         depLog.created = scoped.groups.map(g => "Group: " + g.displayName);
       } else {
-        const dep = await Importer.ensureDependencies(scoped, (m) => toast(esc(m)));
+        const dep = await Importer.ensureDependencies(scoped, (m) => toast(esc(m)), { matchedNames });
         depLog = dep.log; maps = dep.maps;
-        res = await Importer.importPolicies(chosen, maps, (m) => toast(esc(m)));
+        res = await Importer.importPolicies(chosen, maps, (m) => toast(esc(m)), { mode: imMode });
       }
       // Change report — shown on screen and downloadable. A failed import is
       // the case you most need to read, so it should not require opening a file.
-      const md = Importer.buildReport({ tenantName, fileName: imFileName, depLog, planItems: imPlan, results: res.results, warnings: res.warnings });
+      const md = Importer.buildReport({ tenantName, fileName: imFileName, depLog, planItems: imPlan, results: res.results, warnings: res.warnings, mode: imMode });
       const failed = res.results.filter(r => !r.ok).length;
       $("importModal").classList.remove("open");
       showReport("📥 Import report", "CA-Import-Report", md);
@@ -1958,8 +1990,8 @@
     $("toolImport").click();
     if (n) {
       $("imDesc").textContent = `Baseline ${BASELINE.release}: ${n} ${n === 1 ? "policy is" : "policies are"} missing or outdated in this tenant. `
-        + "Select the baseline backup zip (or its extracted folder) — dependencies are imported first, policies always land Off, "
-        + "and includes are remapped onto this tenant's persona groups.";
+        + "Select the baseline backup zip (or its extracted folder). Choose an assignment mode: deploy new policies onto this tenant's persona groups, "
+        + "or match & replace — an updated policy keeps the current one's assignment and its old version is switched Off.";
     }
   });
 

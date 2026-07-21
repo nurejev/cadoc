@@ -118,13 +118,28 @@ const Importer = (() => {
     return n;
   }
 
-  // ---------- plan: which policies import / skip ----------
-  function plan(bundle, existingNames) {
-    const existing = existingNames.map(parseCaVersion).filter(x => x.num != null && x.ver);
+  // ---------- plan: which policies import / skip / update ----------
+  // `existing` may be a legacy array of display-name strings, or the tenant's
+  // raw policy objects. The objects carry the id + assignments needed for the
+  // "match & replace" mode (copy the current scoping, disable the old policy).
+  function plan(bundle, existing) {
+    const ex = (existing || []).map((e) => {
+      const name = typeof e === "string" ? e : (e && (e.displayName || e.name)) || "";
+      const raw = typeof e === "string" ? null : (e && (e.raw || e));
+      const { num, ver } = parseCaVersion(name);
+      return { num, ver, name, raw, id: raw && raw.id };
+    }).filter((e) => e.num != null && e.ver);
     return bundle.policies.map(raw => {
       const { num, ver } = parseCaVersion(raw.displayName);
-      const exists = num != null && ver != null && existing.some(e => e.num === num && e.ver === ver);
+      const sameNum = num != null ? ex.filter((e) => e.num === num) : [];
+      const exact = sameNum.find((e) => e.ver === ver);        // same CA number + same version
+      const other = sameNum.find((e) => e.ver !== ver);        // present, but a different version
       const asIs = isEAdmins(raw.displayName);
+      const exists = !!exact;
+      // "upgrade": the tenant already has this CA number at another version, so
+      // it can be replaced in place rather than deployed alongside. E-Admins are
+      // always handled as-is, never auto-replaced.
+      const upgrade = !exact && !!other && !asIs;
       const persona = asIs ? null : personaOf(raw.displayName);
       // A ToU has no Graph create API, so a policy granting one needs a manual
       // step (create the ToU in the portal, re-import). Flag it up front.
@@ -132,8 +147,11 @@ const Importer = (() => {
       return {
         raw, name: raw.displayName, num, ver, asIs,
         persona, personaGroup: persona ? PERSONA_GROUPS[persona] : null,
-        exists, needsTou,
+        exists, upgrade,
+        existing: upgrade ? { id: other.id, name: other.name, ver: other.ver, raw: other.raw } : null,
+        needsTou,
         reason: exists ? `already exists (CA${num} v${ver})`
+          : upgrade ? `already in tenant as v${other.ver}`
           : asIs ? "E-Admins — imported as-is (state & assignments unchanged)"
           : !persona ? "no persona detected — include assignment kept as-is" : null,
       };
@@ -163,7 +181,10 @@ const Importer = (() => {
     };
   }
 
-  async function ensureDependencies(bundle, onStatus) {
+  async function ensureDependencies(bundle, onStatus, opts = {}) {
+    // Policies being replaced keep their current tenant assignment, so they need
+    // no deploy persona group — don't create one just for them.
+    const matchedNames = new Set(opts.matchedNames || []);
     const maps = { group: {}, loc: {}, strength: {}, ctx: {}, tou: {}, ph: {} };
     // missingTou: ToU display names the tenant lacks. A ToU has no Graph create
     // API (the PDF/localised content must be uploaded in the portal), so these
@@ -217,8 +238,8 @@ const Importer = (() => {
       }
     }
 
-    // persona groups needed by the policies themselves
-    const personaNames = [...new Set(bundle.policies.map(p => personaOf(p.displayName)).filter(Boolean).map(p => PERSONA_GROUPS[p]))];
+    // persona groups needed by the policies themselves (not the replaced ones)
+    const personaNames = [...new Set(bundle.policies.filter(p => !matchedNames.has(p.displayName)).map(p => personaOf(p.displayName)).filter(Boolean).map(p => PERSONA_GROUPS[p]))];
     maps.personaGroupIds = {};
     for (const gname of personaNames) {
       onStatus?.(`Persona group ${gname}…`);
@@ -322,7 +343,7 @@ const Importer = (() => {
     return o;
   };
 
-  function buildPolicyPayload(raw, maps, personaGroupId, warnings, asIs = false) {
+  function buildPolicyPayload(raw, maps, personaGroupId, warnings, asIs = false, matchFrom = null) {
     const ph = maps.ph || {};
     // resolve a value that may be a template placeholder, a known old id, or a literal
     const resolveRef = (v, kindMap) => {
@@ -345,7 +366,22 @@ const Importer = (() => {
       catch (e) { warnings.push(`${raw.displayName}: ${e.message} — group reference dropped`); return []; }
     });
 
-    if (asIs) {
+    if (matchFrom) {
+      // Match & replace: this CA number already exists in the tenant. Keep the
+      // NEW version's controls/conditions, but take the whole USER assignment
+      // (include/exclude users, groups, roles, guests) verbatim from the policy
+      // already deployed — those ids are valid in this tenant. The old policy is
+      // disabled afterwards by importPolicies.
+      const eu = (matchFrom.conditions && matchFrom.conditions.users) || {};
+      u.includeUsers = Array.isArray(eu.includeUsers) ? [...eu.includeUsers] : ["None"];
+      u.includeGroups = Array.isArray(eu.includeGroups) ? [...eu.includeGroups] : [];
+      u.includeRoles = Array.isArray(eu.includeRoles) ? [...eu.includeRoles] : [];
+      u.excludeUsers = Array.isArray(eu.excludeUsers) ? [...eu.excludeUsers] : [];
+      u.excludeGroups = Array.isArray(eu.excludeGroups) ? [...eu.excludeGroups] : [];
+      u.excludeRoles = Array.isArray(eu.excludeRoles) ? [...eu.excludeRoles] : [];
+      if (eu.includeGuestsOrExternalUsers) u.includeGuestsOrExternalUsers = eu.includeGuestsOrExternalUsers; else delete u.includeGuestsOrExternalUsers;
+      if (eu.excludeGuestsOrExternalUsers) u.excludeGuestsOrExternalUsers = eu.excludeGuestsOrExternalUsers; else delete u.excludeGuestsOrExternalUsers;
+    } else if (asIs) {
       // as-is: keep all assignments; resolve placeholders / known ids only
       u.includeGroups = mapGroups(u.includeGroups);
       u.excludeGroups = mapGroups(u.excludeGroups);
@@ -394,16 +430,33 @@ const Importer = (() => {
   }
 
   // ---------- apply ----------
-  async function importPolicies(items, maps, onStatus) {
+  // opts.mode: "deploy" (default) → new/updated policies scoped to the deploy
+  // persona group; "replace" → policies already in the tenant keep their current
+  // assignment and the old version is switched Off.
+  async function importPolicies(items, maps, onStatus, opts = {}) {
+    const replace = opts.mode === "replace";
     const results = [], warnings = [];
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       onStatus?.(`Importing ${it.name} (${i + 1}/${items.length})…`);
       try {
         const gid = it.personaGroup ? maps.personaGroupIds?.[it.personaGroup] : null;
-        const payload = buildPolicyPayload(it.raw, maps, gid, warnings, it.asIs);
+        const matchFrom = replace && it.upgrade && it.existing ? it.existing.raw : null;
+        const payload = buildPolicyPayload(it.raw, maps, gid, warnings, it.asIs, matchFrom);
         await Graph.gpost("/identity/conditionalAccess/policies", payload, [...AUTH_CONFIG.scopes, ...WRITE]);
-        results.push({ name: it.name, ok: true, persona: it.persona, personaGroup: it.personaGroup, asIs: it.asIs });
+        let disabledOld = false;
+        const oldName = it.existing?.name || null;
+        if (matchFrom && it.existing?.id) {
+          // switch the superseded policy Off; both land disabled, so the admin
+          // reviews the new one and removes the old when satisfied.
+          try {
+            await Graph.gpatch(`/identity/conditionalAccess/policies/${it.existing.id}`, { state: "disabled" }, [...AUTH_CONFIG.scopes, ...WRITE]);
+            disabledOld = true;
+          } catch (e) {
+            warnings.push(`${it.name}: the new version was created, but disabling the current policy "${oldName}" failed — disable it manually: ${e.message}`);
+          }
+        }
+        results.push({ name: it.name, ok: true, persona: it.persona, personaGroup: matchFrom ? null : it.personaGroup, asIs: it.asIs, matched: !!matchFrom, disabledOld, oldName: matchFrom ? oldName : null });
       } catch (e) {
         console.error("Import failed:", it.name, e);
         results.push({ name: it.name, ok: false, error: e.message || String(e) });
@@ -413,18 +466,21 @@ const Importer = (() => {
   }
 
   // ---------- markdown change report ----------
-  function buildReport({ tenantName, fileName, depLog, planItems, results, warnings }) {
+  function buildReport({ tenantName, fileName, depLog, planItems, results, warnings, mode }) {
     const d = new Date();
     const pad = (n) => String(n).padStart(2, "0");
     const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     const skipped = planItems.filter(p => p.exists);
+    const replaced = results.filter(r => r.ok && r.matched);
     const lines = [
       `# Conditional Access import report`,
       ``,
       `- **Tenant:** ${tenantName}`,
       `- **Date:** ${stamp}`,
       `- **Source:** ${fileName}`,
+      `- **Assignment mode:** ${mode === "replace" ? "Match & replace — existing policies keep their current assignment; the superseded version is switched Off" : "Deployment groups — includes remapped to the deploy persona group (CAD-SEC-U-DG-*)"}`,
       `- **Policies imported:** ${results.filter(r => r.ok).length} (all in state **Off/disabled**)`,
+      ...(replaced.length ? [`- **Policies replaced (old version disabled):** ${replaced.filter(r => r.disabledOld).length} of ${replaced.length}`] : []),
       `- **Policies skipped (already exist):** ${skipped.length}`,
       `- **Failures:** ${results.filter(r => !r.ok).length}`,
       ``,
@@ -436,6 +492,8 @@ const Importer = (() => {
       ``,
       ...(results.filter(r => r.ok).map(r => r.asIs
         ? `- ✅ **${r.name}** — **imported as-is** (E-Admins: state and assignments unchanged)`
+        : r.matched
+        ? `- ♻️ **${r.name}** — state Off; **assignment copied from the current policy**${r.disabledOld ? `; previous version **${r.oldName}** switched Off` : `; ⚠ could not disable previous version${r.oldName ? ` **${r.oldName}**` : ""}`}`
         : `- ✅ **${r.name}** — state set to Off; include assignment → ${r.personaGroup ? `\`${r.personaGroup}\` (persona: ${r.persona})` : "kept as in source"}`)),
       ``,
       ...(skipped.length ? [`## Skipped (already exist by CA number + version)`, ``, ...skipped.map(p => `- ⏭ ${p.name} — ${p.reason}`), ``] : []),

@@ -459,6 +459,15 @@ tr.detail>td{background:var(--hover);padding:12px 18px}
 .ex-focus{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;
   background:var(--soft);border:1px solid var(--border);border-radius:var(--radius);font-size:13px}
 .ex-focus .fchip{margin-left:auto}
+/* import assignment-mode chooser */
+.im-mode{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 2px}
+.im-mode-opt{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:start;
+  padding:10px 12px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--surface)}
+.im-mode-opt input{grid-row:1 / span 2;align-self:center}
+.im-mode-opt b{align-self:center}
+.im-mode-opt .mini{grid-column:2}
+.im-mode-opt.on{border-color:var(--green);background:var(--soft);box-shadow:inset 0 0 0 1px var(--green)}
+@media(max-width:640px){.im-mode{grid-template-columns:1fr}}
 
 /* ---------- modal / toast ---------- */
 /* stacking order: full-screen matrix panel 200 < modals 300 < dependency

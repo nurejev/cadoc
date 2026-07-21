@@ -8,7 +8,7 @@
 // ======================================================================
 const APP_BUILD = {
   version: "1.0",
-  build: 134,
+  build: 135,
   date: "2026-07-21",
   get label() { return `v${this.version}.${this.build}`; },
   get full() { return `${this.label} · ${this.date}`; },
@@ -29,5 +29,5 @@ const TOOL_VERSIONS = {
   toolJson:         { v: "1.2", note: "policy zip including dependencies and terms-of-use PDFs" },
   toolCaGroups:     { v: "1.5", note: "baseline group check, creation, members × groups matrix, and policy assignment in one tool, per-group member scan, manual group builder, remove-group action, final confirm, assignment change report, pick-by-persona, TeamsSharedDevices template, per-row create, recreate-role-assignable" },
   toolState:        { v: "1.0", note: "On / report-only / Off switching" },
-  toolImport:       { v: "1.8", note: "dependencies first, persona remapping, placeholder resolution, change report, on-screen report, claims-challenge step-up, up-front consent, import by persona, dependency scoping to selection, terms-of-use checklist" },
+  toolImport:       { v: "1.9", note: "dependencies first, persona remapping, placeholder resolution, change report, on-screen report, claims-challenge step-up, up-front consent, import by persona, dependency scoping to selection, terms-of-use checklist, assignment mode (deployment groups or match & replace: keep the current policy's assignment and switch its superseded version Off)" },
 };
