@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=141">
+<link rel="stylesheet" href="css/app.css?v=142">
 </head>
 <body>
 
@@ -89,6 +89,10 @@
       <div class="tool" id="toolGapCheck">
         <div class="tool-ic">🛡</div><h3>Best-practice &amp; bypass checks <span class="tag new">BETA</span></h3>
         <p>Check the baseline against known CA bypasses and the Swiss-cheese model — MFA coverage, FOCI token sharing, break-glass coverage, known bypass apps, persona × control matrix.</p>
+      </div>
+      <div class="tool" id="toolValidator">
+        <div class="tool-ic">⚡</div><h3>CA validator <span class="tag new">BETA</span></h3>
+        <p>Per policy, the sign-in simulations it implies — user, app, client, location, platform, risk — and the control each one should (or should not) enforce. Ported from Jasper Baes' CA Validator.</p>
       </div>
       <div class="tool" id="toolExclusions">
         <div class="tool-ic">🚪</div><h3>Exclusion analyzer <span class="tag new">BETA</span></h3>
@@ -428,6 +432,27 @@
     <div id="gcBody" style="margin-top:14px"></div>
   </section>
 
+  <!-- ============ CA VALIDATOR ============
+       Read-only simulation report — a port of the simulation generator from
+       Jasper Baes' Conditional Access Validator (CC BY-NC-SA 4.0). -->
+  <section id="screen-validator" class="screen">
+    <div class="list-card readme" id="vaHead" style="margin-top:0"></div>
+    <div class="toolbar" style="margin-top:14px">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="vaSearch" placeholder="Search policy or simulation…" autocomplete="off">
+      </div>
+      <div class="chip-filter" id="vaChips"></div>
+      <label class="chk" id="vaROWrap" style="margin:0"><input type="checkbox" id="vaReportOnly"> Include report-only policies</label>
+      <div class="tb-actions">
+        <button class="btn" id="vaExpand" title="Collapse or expand every policy">⊟ Collapse all</button>
+        <button class="btn" id="vaRefresh" title="Re-fetch policies and re-run the simulations">⟳ Refresh</button>
+        <button class="btn" id="vaMd">Export MD</button>
+      </div>
+    </div>
+    <div id="vaBody" style="margin-top:14px"></div>
+  </section>
+
   <!-- ============ HELP — opens as a tool, in its own tab ============ -->
   <section id="screen-help" class="screen">
     <div class="help-page">
@@ -481,6 +506,18 @@
         <li><b>Export MD</b> — the findings as Markdown for a ticket or review.</li>
       </ul>
       <p class="help-x">Read-only.</p>
+    </section>
+
+    <section class="help-sec">
+      <h4>⚡ CA validator <span class="tag new">BETA</span></h4>
+      <p>For each enabled policy, the sign-in <b>simulations</b> it implies — the combinations of user, application, client app, location, device platform and risk it targets — and, per grant control, the control each one should enforce.</p>
+      <ul>
+        <li><b>Expected control</b> — every simulation shows the control the policy would require (MFA, Block, Compliant device, …). When the principal, app, location or platform is on the <b>excluded</b> side, the expectation inverts to <b>“no &lt;control&gt;”</b> — proving the policy does not fire there.</li>
+        <li><b>Include report-only</b> — off by default; tick it to also simulate policies in report-only mode.</li>
+        <li><b>Filter &amp; search</b> — filter by expected control, or search by policy or simulation text; collapse/expand all policies.</li>
+        <li>Users are shown as <b>representative placeholders</b> (“all users”, “members of &lt;group&gt;”, “role: …”) — no individual accounts are sampled. Session-only policies are listed as having nothing to assert.</li>
+      </ul>
+      <p class="help-x">Read-only. Ported from Jasper Baes' <a href="https://github.com/jasperbaes/Conditional-Access-Validator" target="_blank" rel="noopener">Conditional Access Validator</a> (CC BY-NC-SA 4.0); the Maester test-code generation is not included.</p>
     </section>
 
     <section class="help-sec">
@@ -818,26 +855,27 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/version.js?v=141"></script>
-<script src="js/authConfig.js?v=141"></script>
-<script src="js/labels.js?v=141"></script>
-<script src="js/graph.js?v=141"></script>
-<script src="js/model.js?v=141"></script>
-<script src="js/render.js?v=141"></script>
-<script src="js/analyze.js?v=141"></script>
-<script src="js/whatif.js?v=141"></script>
-<script src="js/mslearn.js?v=141"></script>
-<script src="js/gapcheck.js?v=141"></script>
-<script src="js/exclusions.js?v=141"></script>
-<script src="js/baselineData.js?v=141"></script>
-<script src="js/baselineJoeyData.js?v=141"></script>
-<script src="js/baseline.js?v=141"></script>
-<script src="js/groupTemplates.js?v=141"></script>
-<script src="js/assign.js?v=141"></script>
-<script src="js/cagroups.js?v=141"></script>
-<script src="js/import.js?v=141"></script>
-<script src="js/export.js?v=141"></script>
-<script src="js/demo.js?v=141"></script>
-<script src="js/app.js?v=141"></script>
+<script src="js/version.js?v=142"></script>
+<script src="js/authConfig.js?v=142"></script>
+<script src="js/labels.js?v=142"></script>
+<script src="js/graph.js?v=142"></script>
+<script src="js/model.js?v=142"></script>
+<script src="js/render.js?v=142"></script>
+<script src="js/analyze.js?v=142"></script>
+<script src="js/whatif.js?v=142"></script>
+<script src="js/mslearn.js?v=142"></script>
+<script src="js/gapcheck.js?v=142"></script>
+<script src="js/exclusions.js?v=142"></script>
+<script src="js/validator.js?v=142"></script>
+<script src="js/baselineData.js?v=142"></script>
+<script src="js/baselineJoeyData.js?v=142"></script>
+<script src="js/baseline.js?v=142"></script>
+<script src="js/groupTemplates.js?v=142"></script>
+<script src="js/assign.js?v=142"></script>
+<script src="js/cagroups.js?v=142"></script>
+<script src="js/import.js?v=142"></script>
+<script src="js/export.js?v=142"></script>
+<script src="js/demo.js?v=142"></script>
+<script src="js/app.js?v=142"></script>
 </body>
 </html>

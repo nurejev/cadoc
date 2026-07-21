@@ -484,6 +484,18 @@ tr.detail>td{background:var(--hover);padding:12px 18px}
 .help-sec{border-top:1px solid var(--line);padding:14px 0 2px}
 .help-sec:first-of-type{border-top:0}
 .help-sec h4{margin:0 0 6px;font-size:15px;scroll-margin-top:120px}
+/* CA validator simulation report */
+.va-card{padding:0;margin-bottom:10px;overflow:hidden}
+.va-h{display:flex;align-items:center;gap:8px;padding:12px 16px;cursor:pointer;user-select:none}
+.va-h:hover{background:var(--hover)}
+.va-caret{color:var(--muted);width:14px}
+.va-tablewrap{overflow:auto;border-top:1px solid var(--line)}
+.va-table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+.va-table th,.va-table td{text-align:left;padding:6px 12px;border-bottom:1px solid var(--line)}
+.va-table thead th{position:sticky;top:0;background:var(--soft);color:var(--muted);font-weight:600;z-index:1}
+.va-table tbody tr:hover td{background:var(--hover)}
+.va-yes{font-weight:700;color:var(--green)}
+.va-no{font-weight:700;color:var(--off)}
 .help-sec p{margin:0 0 8px}
 .help-sec ul{margin:0 0 8px;padding-left:20px}
 .help-sec li{margin:4px 0}

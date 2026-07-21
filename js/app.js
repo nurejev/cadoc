@@ -47,7 +47,7 @@
   // be the login redirect, which is why it felt like being "thrown out".
   // Each tool screen pushes a state; Back walks those before it ever leaves.
   const HISTORY_SCREENS = new Set(["screen-home", "screen-list", "screen-baseline",
-    "screen-cagroups", "screen-mslearn", "screen-gapcheck", "screen-exclusions", "screen-help"]);
+    "screen-cagroups", "screen-mslearn", "screen-gapcheck", "screen-exclusions", "screen-validator", "screen-help"]);
   let navSuppress = false;   // true while we are reacting to popstate
 
   function show(id) {
@@ -701,6 +701,7 @@
     ["toolDocument", "📄 Create documentation"],
     ["toolAnalyze", "🔍 Gap analyse"],
     ["toolGapCheck", "🛡 Best-practice & bypass checks"],
+    ["toolValidator", "⚡ CA validator"],
     ["toolExclusions", "🚪 Exclusion analyzer"],
     ["toolBaseline", "🧬 Baseline Policies"],
     ["toolBaselineJoey", "🧩 Baseline (Joey Verlinden)"],
@@ -796,6 +797,7 @@
   $("toolMsLearn").addEventListener("click", () => { crumb("📘 MS Learn checks"); openMsLearn(); });
   $("toolGapCheck").addEventListener("click", () => { crumb("🛡 Best-practice & bypass checks"); openGapCheck(); });
   $("toolExclusions").addEventListener("click", () => { crumb("🚪 Exclusion analyzer"); openExclusions(); });
+  $("toolValidator").addEventListener("click", () => { openValidator(); });   // openValidator sets its own crumb
   $("toolBaseline").addEventListener("click", () => { crumb("🧬 Baseline Policies"); openBaseline("limonit"); });
   $("toolBaselineJoey").addEventListener("click", () => { crumb("🧩 Baseline (Joey Verlinden)"); openBaseline("joey"); });
   // Backup tool: opens the policy overview in backup mode — select policies
@@ -2249,6 +2251,178 @@
     showReport("🚪 Exclusion report", "CA-Exclusions", Exclusions.toMd(exModel, exUsers, tenantName));
     toast("Exclusion Markdown <span>downloaded</span>");
   });
+
+  // ---------- CA validator (simulation report) ----------
+  // A read-only port of the simulation generator from Jasper Baes' Conditional
+  // Access Validator (https://github.com/jasperbaes/Conditional-Access-Validator).
+  let vaResult = null, vaFilter = "all", vaQuery = "", vaReportOnly = false;
+  const vaCollapsed = new Set();
+  const isGuid = (s) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || "");
+
+  // Resolve every id the eligible policies reference to a display name — one
+  // batched pass, no group-membership expansion (users stay placeholders).
+  async function buildValidatorNames(reportOnly) {
+    const names = { user: {}, group: {}, role: {}, app: {}, location: {} };
+    const refs = Validator.collectRefs(policies.map((p) => p.raw), reportOnly);
+    if (isDemo) {
+      const dn = (typeof DEMO_DATA !== "undefined" && DEMO_DATA.names) || {};
+      [...refs.users].forEach((id) => names.user[id] = dn[id] || id);
+      [...refs.groups].forEach((id) => names.group[id] = dn[id] || id);
+      [...refs.roles].forEach((id) => names.role[id] = dn[id] || id);
+      [...refs.apps].forEach((id) => names.app[id] = dn[id] || id);
+      [...refs.locations].forEach((id) => names.location[id] = dn[id] || id);
+      return names;
+    }
+    // users + groups via getByIds (chunks of 1000)
+    const dirIds = [...refs.users, ...refs.groups].filter(isGuid);
+    for (let i = 0; i < dirIds.length; i += 1000) {
+      try {
+        const j = await Graph.gpost("/directoryObjects/getByIds", { ids: dirIds.slice(i, i + 1000), types: ["user", "group"] });
+        (j.value || []).forEach((o) => {
+          const t = (o["@odata.type"] || "").toLowerCase();
+          if (t.includes("group")) names.group[o.id] = o.displayName || o.id;
+          else names.user[o.id] = o.displayName || o.userPrincipalName || o.id;
+        });
+      } catch (e) { console.warn("validator: directory lookup failed", e.message); }
+    }
+    if (refs.roles.length) {
+      try {
+        const tpl = await Graph.ggetAll("/directoryRoleTemplates");
+        refs.roles.forEach((id) => { const t = tpl.find((x) => x.id === id); if (t) names.role[id] = t.displayName; });
+      } catch (e) { console.warn("validator: role templates failed", e.message); }
+    }
+    if (refs.locations.length) {
+      try {
+        const locs = await Graph.ggetAll("/identity/conditionalAccess/namedLocations");
+        refs.locations.forEach((id) => { const l = locs.find((x) => x.id === id); if (l) names.location[id] = l.displayName; });
+      } catch (e) { console.warn("validator: named locations failed", e.message); }
+    }
+    const apps = refs.apps.filter(isGuid);
+    for (let i = 0; i < apps.length; i += 15) {
+      try {
+        const flt = apps.slice(i, i + 15).map((id) => `'${id}'`).join(",");
+        const sps = await Graph.ggetAll(`/servicePrincipals?$filter=appId in (${flt})&$select=appId,displayName`);
+        apps.slice(i, i + 15).forEach((id) => { const sp = sps.find((s) => s.appId === id); if (sp) names.app[id] = sp.displayName; });
+      } catch (e) { console.warn("validator: app lookup failed", e.message); }
+    }
+    return names;
+  }
+
+  async function openValidator() {
+    crumb("⚡ CA validator");
+    show("screen-validator");
+    if (!policies.length) { $("vaHead").innerHTML = '<p class="mini">No policies loaded.</p>'; $("vaBody").innerHTML = ""; $("vaChips").innerHTML = ""; return; }
+    $("vaHead").innerHTML = '<h3>⚡ CA validator</h3><p class="mini" style="margin:6px 0 0">Generating simulations…</p>';
+    $("vaChips").innerHTML = ""; $("vaBody").innerHTML = ""; vaFilter = "all"; vaQuery = ""; $("vaSearch").value = ""; vaCollapsed.clear();
+    $("vaReportOnly").checked = vaReportOnly;
+    try {
+      const names = await buildValidatorNames(vaReportOnly);
+      vaResult = Validator.simulate(policies.map((p) => p.raw), { names, includeReportOnly: vaReportOnly });
+      renderValidator();
+    } catch (e) {
+      console.error("CA validator failed:", e);
+      $("vaHead").innerHTML = `<h3>⚡ CA validator</h3><p class="mini" style="color:var(--off)">Failed: ${esc(e.message || e)}</p>`;
+    }
+  }
+
+  const VA_CTRL_ORDER = ["block", "mfa", "authenticationStrength", "compliantDevice", "domainJoinedDevice", "passwordChange"];
+  function renderValidator() {
+    if (!vaResult) return;
+    const r = vaResult;
+    $("vaHead").innerHTML = `<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px">
+        <h3>⚡ CA validator</h3>
+        <p style="margin-bottom:6px">For each enabled policy, the sign-in simulations it implies and the control each one should enforce. A simulation on the <b>excluded</b> side inverts to <b>“no &lt;control&gt;”</b>.</p>
+        <p class="mini muted" style="margin:0">Ported from <a href="https://github.com/jasperbaes/Conditional-Access-Validator" target="_blank" rel="noopener">Jasper Baes' Conditional Access Validator</a> (CC BY-NC-SA 4.0). Simulation report only; users are representative placeholders.</p>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:26px;font-weight:700">${r.simCount}<span class="mini" style="font-weight:400"> simulations</span></div>
+        <div class="mini">${r.simulatedPolicies} of ${r.policyCount} policies simulated</div>
+        ${r.skipped.length ? `<div class="mini">${r.skipped.length} skipped (session-only / no controls)</div>` : ""}
+      </div></div>`;
+
+    // control filter chips
+    const counts = {};
+    r.sims.forEach((s) => counts[s.expectedControl] = (counts[s.expectedControl] || 0) + 1);
+    const chips = [["all", `All (${r.simCount})`], ...VA_CTRL_ORDER.filter((c) => counts[c]).map((c) => [c, `${Validator.CONTROL_LABEL[c]} (${counts[c]})`])];
+    $("vaChips").innerHTML = chips.map(([k, l]) => `<button class="fchip ${vaFilter === k ? "active" : ""}" data-vaf="${esc(k)}">${esc(l)}</button>`).join("");
+
+    // filter + search
+    const q = vaQuery.toLowerCase();
+    const match = (s) => (vaFilter === "all" || s.expectedControl === vaFilter);
+    const groups = r.groups.map((g) => {
+      const sims = g.sims.filter((s) => match(s) && (!q || s.title.toLowerCase().includes(q) || g.name.toLowerCase().includes(q)));
+      return { ...g, shown: sims };
+    }).filter((g) => g.shown.length);
+
+    if (!groups.length) { $("vaBody").innerHTML = '<p class="mini" style="padding:20px">No simulations match the current filter.</p>'; return; }
+    const stateTag = (st) => st === "enabledForReportingButNotEnforced" ? '<span class="tag">report-only</span>' : "";
+    const cell = (v) => v && v !== "All" ? esc(v) : '<span class="muted">·</span>';
+    $("vaBody").innerHTML = groups.map((g) => {
+      const open = !vaCollapsed.has(g.id);
+      const rows = g.shown.map((s) => `<tr>
+        <td>${s.inverted ? '<span class="va-no">no ' + esc(s.controlLabel) + '</span>' : '<span class="va-yes">' + esc(s.controlLabel) + '</span>'}</td>
+        <td>${esc(s.upn)}${s.userType === "excluded" ? ' <span class="tag block">excl</span>' : ""}</td>
+        <td>${esc(s.appName)}${s.appType === "excluded" ? ' <span class="tag block">excl</span>' : ""}</td>
+        <td>${cell(Validator.clientLabel(s.clientApp))}</td>
+        <td>${cell(s.ipRange)}${s.locationType === "excluded" ? ' <span class="tag block">excl</span>' : ""}</td>
+        <td>${cell(s.devicePlatform)}${s.platformType === "excluded" ? ' <span class="tag block">excl</span>' : ""}</td>
+        <td>${cell(s.userRisk)}</td><td>${cell(s.signInRisk)}</td><td>${cell(s.userAction)}</td>
+      </tr>`).join("");
+      return `<div class="list-card va-card">
+        <div class="va-h" data-vagroup="${esc(g.id)}">
+          <span class="va-caret">${open ? "▾" : "▸"}</span>
+          <b>${esc(g.name)}</b> ${stateTag(g.state)}
+          <span class="mini muted">${g.shown.length} simulation${g.shown.length === 1 ? "" : "s"}${g.capped ? " · capped" : ""}</span>
+        </div>
+        <div class="va-tablewrap" style="${open ? "" : "display:none"}">
+          <table class="va-table">
+            <thead><tr><th>Expected</th><th>User</th><th>Application</th><th>Client</th><th>Location</th><th>Platform</th><th>User risk</th><th>Sign-in risk</th><th>User action</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+    }).join("") + (r.skipped.length ? `<p class="mini muted" style="margin-top:10px">Not simulated (no grant control to assert): ${r.skipped.map((s) => esc(s.name)).join(", ")}</p>` : "");
+  }
+
+  function vaMarkdown() {
+    const r = vaResult; if (!r) return "";
+    const L = [`# Conditional Access validation — ${tenantName || "tenant"}`, "",
+      `Generated ${new Date().toISOString().replace("T", " ").slice(0, 16)} UTC by Conditional Access Baseline Tools (cadoc.limon-it.nl).`, "",
+      `Simulation generator ported from [Jasper Baes' Conditional Access Validator](https://github.com/jasperbaes/Conditional-Access-Validator) (CC BY-NC-SA 4.0).`, "",
+      `- Policies simulated: **${r.simulatedPolicies}** of ${r.policyCount}`, `- Simulations: **${r.simCount}**`,
+      ...(r.skipped.length ? [`- Skipped (session-only / no controls): ${r.skipped.map((s) => s.name).join(", ")}`] : []), ""];
+    for (const g of r.groups) {
+      L.push(`## ${g.name}${g.state === "enabledForReportingButNotEnforced" ? " *(report-only)*" : ""}`, "");
+      L.push("| Expected | User | Application | Client | Location | Platform | User risk | Sign-in risk | User action |", "| --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+      for (const s of g.sims) {
+        const c = (v) => (v && v !== "All" ? String(v).replace(/\|/g, "\\|") : "·");
+        L.push(`| ${s.inverted ? "no " : ""}${s.controlLabel} | ${c(s.upn)} | ${c(s.appName)} | ${c(Validator.clientLabel(s.clientApp))} | ${c(s.ipRange)} | ${c(s.devicePlatform)} | ${c(s.userRisk)} | ${c(s.signInRisk)} | ${c(s.userAction)} |`);
+      }
+      L.push("");
+    }
+    return L.join("\n");
+  }
+
+  $("vaChips").addEventListener("click", (e) => { const b = e.target.closest("[data-vaf]"); if (!b) return; vaFilter = b.dataset.vaf; renderValidator(); });
+  $("vaBody").addEventListener("click", (e) => {
+    const h = e.target.closest("[data-vagroup]"); if (!h) return;
+    const id = h.dataset.vagroup;
+    if (vaCollapsed.has(id)) vaCollapsed.delete(id); else vaCollapsed.add(id);
+    renderValidator();
+  });
+  $("vaSearch").addEventListener("input", (e) => { vaQuery = e.target.value; renderValidator(); });
+  $("vaExpand").addEventListener("click", () => {
+    if (!vaResult) return;
+    const allOpen = vaResult.groups.every((g) => !vaCollapsed.has(g.id));
+    vaCollapsed.clear();
+    if (allOpen) vaResult.groups.forEach((g) => vaCollapsed.add(g.id));
+    $("vaExpand").textContent = allOpen ? "⊞ Expand all" : "⊟ Collapse all";
+    renderValidator();
+  });
+  $("vaReportOnly").addEventListener("change", (e) => { vaReportOnly = e.target.checked; openValidator(); });
+  $("vaRefresh").addEventListener("click", async () => { if (!isDemo) await loadFromGraph(true); openValidator(); });
+  $("vaMd").addEventListener("click", () => { if (!vaResult) return; showReport("⚡ CA validation report", "CA-Validation", vaMarkdown()); });
 
   // ---------- MS Learn documented exclusion checks ----------
   let mlGroups = null, mlFilter = "all", mlStrengths = new Map(), mlFixes = null, mlTab = "findings";
