@@ -3180,6 +3180,9 @@
   // ---------- Named locations (view / create / edit / delete) ----------
   const LO_WRITE = ["Policy.ReadWrite.ConditionalAccess"];
   let loList = null, loFilter = "all", loQuery = "", loEditing = null, loDeleting = null;
+  // Cards sit in a grid (two or more per row); Table is the same information
+  // one line per location, for tenants with 80+ of them.
+  let loView = "cards";
 
   async function openLocations(force) {
     crumb("🌐 Named locations");
@@ -3231,22 +3234,54 @@
       return !q || `${l.displayName} ${Locations.detail(l)}`.toLowerCase().includes(q);
     }).sort((a, b) => (a.displayName || "").localeCompare(b.displayName || ""));
 
+    [...$("loViewSeg").children].forEach((b) => b.classList.toggle("active", b.dataset.loview === loView));
     if (!rows.length) { $("loBody").innerHTML = '<p class="mini" style="padding:20px">No named location matches the current filter.</p>'; return; }
-    $("loBody").innerHTML = rows.map((l) => {
-      const k = Locations.kindOf(l), used = Locations.usedBy(l, raws), canEdit = Locations.editable(l);
-      const direct = used.filter((u) => !u.implicit), implicit = used.filter((u) => u.implicit);
-      const list = (arr) => arr.map((p) => `<span class="pol-link" data-polid="${esc(p.id)}">${esc(p.name)}</span>`).join(", ");
+
+    // Shared per-location facts, so the card and the table row can never drift.
+    const facts = (l) => {
+      const used = Locations.usedBy(l, raws);
+      return {
+        k: Locations.kindOf(l), used, canEdit: Locations.editable(l),
+        direct: used.filter((u) => !u.implicit), implicit: used.filter((u) => u.implicit),
+      };
+    };
+    const icon = (k) => k === "ip" ? "🖧" : k === "country" ? "🌍" : "🛡";
+    const kindLabel = (k) => k === "ip" ? "IP ranges" : k === "country" ? "countries" : "network access";
+    const list = (arr) => arr.map((p) => `<span class="pol-link" data-polid="${esc(p.id)}">${esc(p.name)}</span>`).join(", ");
+    const actions = (l, canEdit) => canEdit
+      ? `<button class="btn sm" data-loedit="${esc(l.id)}">✎ Edit</button>
+         <button class="btn sm danger" data-lodel="${esc(l.id)}">🗑 Delete</button>`
+      : '<span class="mini muted">service-managed</span>';
+
+    if (loView === "table") {
+      $("loBody").innerHTML = `<div class="list-card" style="padding:0;overflow:hidden">
+        <table class="plist lo-table">
+          <thead><tr><th>Name</th><th>Type</th><th>Definition</th><th>Used by</th><th></th></tr></thead>
+          <tbody>${rows.map((l) => {
+            const { k, used, canEdit, direct, implicit } = facts(l);
+            return `<tr>
+              <td><b>${esc(l.displayName || "(unnamed)")}</b>${Locations.isTrusted(l) ? ' <span class="tag ok">trusted</span>' : ""}</td>
+              <td class="mini">${icon(k)} ${esc(kindLabel(k))}</td>
+              <td class="mini lo-d">${esc(Locations.detail(l))}</td>
+              <td class="mini">${used.length ? [
+                  direct.length ? `<b>${direct.length}</b> named: ${list(direct)}` : "",
+                  implicit.length ? `<span class="lo-imp"><b>${implicit.length}</b> via “All trusted”: ${list(implicit)}</span>` : "",
+                ].filter(Boolean).join("<br>") : '<span class="muted">not referenced</span>'}</td>
+              <td class="lo-tact">${actions(l, canEdit)}</td>
+            </tr>`;
+          }).join("")}</tbody>
+        </table></div>`;
+      return;
+    }
+
+    $("loBody").innerHTML = `<div class="lo-grid">` + rows.map((l) => {
+      const { k, used, canEdit, direct, implicit } = facts(l);
       return `<div class="list-card lo-card">
         <div class="lo-h">
-          <span class="lo-ic">${k === "ip" ? "🖧" : k === "country" ? "🌍" : "🛡"}</span>
+          <span class="lo-ic">${icon(k)}</span>
           <b>${esc(l.displayName || "(unnamed)")}</b>
           ${Locations.isTrusted(l) ? '<span class="tag ok">trusted</span>' : ""}
-          <span class="tag">${k === "ip" ? "IP ranges" : k === "country" ? "countries" : "network access"}</span>
-          <span class="lo-act">
-            ${canEdit ? `<button class="btn sm" data-loedit="${esc(l.id)}">✎ Edit</button>
-            <button class="btn sm danger" data-lodel="${esc(l.id)}">🗑 Delete</button>`
-            : '<span class="mini muted">service-managed</span>'}
-          </span>
+          <span class="tag">${esc(kindLabel(k))}</span>
         </div>
         <div class="mini lo-d">${esc(Locations.detail(l))}</div>
         <div class="lo-u">${used.length ? [
@@ -3254,10 +3289,12 @@
             implicit.length ? `<span class="lo-imp">Covered by ${implicit.length} polic${implicit.length === 1 ? "y" : "ies"} using “All trusted locations”: ${list(implicit)}</span>` : "",
           ].filter(Boolean).join("<br>")
           : '<span class="mini muted">Not referenced by any policy</span>'}</div>
+        <div class="lo-act">${actions(l, canEdit)}</div>
       </div>`;
-    }).join("");
+    }).join("") + `</div>`;
   }
   $("loChips").addEventListener("click", (e) => { const b = e.target.closest("[data-lof]"); if (!b) return; loFilter = b.dataset.lof; renderLocations(); });
+  $("loViewSeg").addEventListener("click", (e) => { const b = e.target.closest("[data-loview]"); if (!b) return; loView = b.dataset.loview; renderLocations(); });
   $("loSearch").addEventListener("input", (e) => { loQuery = e.target.value; renderLocations(); });
   $("loBody").addEventListener("click", (e) => {
     const ed = e.target.closest("[data-loedit]"); if (ed) { openLoEditor(loList.find((x) => x.id === ed.dataset.loedit)); return; }

@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>ENCA · Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=173">
+<link rel="stylesheet" href="css/app.css?v=174">
 </head>
 <body>
 
@@ -584,6 +584,10 @@
         <input id="loSearch" placeholder="Search named locations…">
       </div>
       <div class="chip-filter" id="loChips"></div>
+      <div class="seg" id="loViewSeg">
+        <button class="active" data-loview="cards">Cards</button>
+        <button data-loview="table">Table</button>
+      </div>
       <div class="tb-actions">
         <button class="btn" id="loRefresh" title="Re-read the named locations from Entra">⟳ Refresh</button>
         <button class="btn" id="loMd">Export MD</button>
@@ -790,6 +794,7 @@
       <h4>🌐 Named locations <span class="tag new">BETA</span> <span class="tag block">writes to tenant</span></h4>
       <p>Manage the named locations your Conditional Access policies target — the IP-range and country locations — without leaving the tool.</p>
       <ul>
+        <li><b>Cards / Table</b> — Cards tile at least two per row with the ranges, usage and the Edit/Delete buttons; Table is the same information one line per location, which is the readable option once a tenant has dozens.</li>
         <li><b>View</b> — every location with its ranges or country list, whether it's <b>trusted</b>, and <b>which policies use it</b> (included or excluded). Filter by IP / country / trusted / unused, or search.</li>
         <li><b>＋ New location</b> — create an <b>IP ranges</b> location (CIDR, one per line, IPv4 or IPv6, optionally marked trusted) or a <b>countries/regions</b> location (two-letter ISO codes, optionally including unknown countries, with client-IP or Authenticator-GPS lookup).</li>
         <li><b>Edit</b> — rename and change the ranges/countries. The <b>type is fixed at creation</b>: an IP location can't become a country location. If you change the trusted flag, you're warned how many policies use “All trusted locations” and would follow the change.</li>
@@ -1172,31 +1177,31 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/version.js?v=173"></script>
-<script src="js/authConfig.js?v=173"></script>
-<script src="js/labels.js?v=173"></script>
-<script src="js/graph.js?v=173"></script>
-<script src="js/model.js?v=173"></script>
-<script src="js/render.js?v=173"></script>
-<script src="js/analyze.js?v=173"></script>
-<script src="js/whatif.js?v=173"></script>
-<script src="js/mslearn.js?v=173"></script>
-<script src="js/gapcheck.js?v=173"></script>
-<script src="js/exclusions.js?v=173"></script>
-<script src="js/validator.js?v=173"></script>
-<script src="js/whatifeval.js?v=173"></script>
-<script src="js/locations.js?v=173"></script>
-<script src="js/audit.js?v=173"></script>
-<script src="js/changelog.js?v=173"></script>
-<script src="js/baselineData.js?v=173"></script>
-<script src="js/baselineJoeyData.js?v=173"></script>
-<script src="js/baseline.js?v=173"></script>
-<script src="js/groupTemplates.js?v=173"></script>
-<script src="js/assign.js?v=173"></script>
-<script src="js/cagroups.js?v=173"></script>
-<script src="js/import.js?v=173"></script>
-<script src="js/export.js?v=173"></script>
-<script src="js/demo.js?v=173"></script>
-<script src="js/app.js?v=173"></script>
+<script src="js/version.js?v=174"></script>
+<script src="js/authConfig.js?v=174"></script>
+<script src="js/labels.js?v=174"></script>
+<script src="js/graph.js?v=174"></script>
+<script src="js/model.js?v=174"></script>
+<script src="js/render.js?v=174"></script>
+<script src="js/analyze.js?v=174"></script>
+<script src="js/whatif.js?v=174"></script>
+<script src="js/mslearn.js?v=174"></script>
+<script src="js/gapcheck.js?v=174"></script>
+<script src="js/exclusions.js?v=174"></script>
+<script src="js/validator.js?v=174"></script>
+<script src="js/whatifeval.js?v=174"></script>
+<script src="js/locations.js?v=174"></script>
+<script src="js/audit.js?v=174"></script>
+<script src="js/changelog.js?v=174"></script>
+<script src="js/baselineData.js?v=174"></script>
+<script src="js/baselineJoeyData.js?v=174"></script>
+<script src="js/baseline.js?v=174"></script>
+<script src="js/groupTemplates.js?v=174"></script>
+<script src="js/assign.js?v=174"></script>
+<script src="js/cagroups.js?v=174"></script>
+<script src="js/import.js?v=174"></script>
+<script src="js/export.js?v=174"></script>
+<script src="js/demo.js?v=174"></script>
+<script src="js/app.js?v=174"></script>
 </body>
 </html>

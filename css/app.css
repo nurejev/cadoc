@@ -632,14 +632,24 @@ tr.detail>td{background:var(--hover);padding:12px 18px}
 .wi-f textarea{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);
   color:var(--ink);font:inherit;font-size:13px;width:100%;resize:vertical;font-family:var(--mono,ui-monospace,monospace)}
 .wi-f textarea:focus{outline:none;border-color:var(--green)}
-/* named locations */
-.lo-card{padding:12px 16px;margin-bottom:10px}
-.lo-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.lo-ic{font-size:15px}
-.lo-act{margin-left:auto;display:flex;gap:6px}
-.lo-d{margin-top:4px;font-family:var(--mono,ui-monospace,monospace)}
-.lo-u{margin-top:6px;font-size:12px;color:var(--muted);padding-top:6px;border-top:1px solid var(--line);line-height:1.7}
+/* named locations — cards tile two-plus per row; a tenant can easily have 80 */
+.lo-grid{display:grid;gap:10px;align-items:start;
+  grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.lo-card{padding:10px 13px;margin-bottom:0;display:flex;flex-direction:column;min-width:0}
+.lo-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px}
+.lo-h b{overflow-wrap:anywhere}
+.lo-ic{font-size:14px}
+/* Actions sit on their own row at the foot of the card: at this width there is
+   no room to float them right of a wrapping title. */
+.lo-act{margin-top:8px;display:flex;gap:6px;justify-content:flex-end}
+.lo-d{margin-top:4px;font-family:var(--mono,ui-monospace,monospace);font-size:11.5px;overflow-wrap:anywhere}
+/* One location used by 30 policies must not stretch its card past the others */
+.lo-u{margin-top:6px;font-size:11.5px;color:var(--muted);padding-top:6px;border-top:1px solid var(--line);
+  line-height:1.6;max-height:96px;overflow:auto;overflow-wrap:anywhere}
 .lo-imp{color:var(--report)}
+.lo-table td{font-size:12.5px}
+.lo-table td.lo-d{margin:0;white-space:normal;max-width:280px}
+.lo-tact{white-space:nowrap;text-align:right}
 /* CA groups — member scan picker */
 .cg-picklist{max-height:44vh;overflow:auto;border:1px solid var(--border);border-radius:var(--radius);
   padding:6px 10px;background:var(--surface)}
