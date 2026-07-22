@@ -346,6 +346,9 @@ tr.grouprow:hover td{background:var(--line)}
 /* every matrix view uses the same scroll container: card surface, visible
    horizontal scrollbar, sticky header + first column */
 .mwrap-x,.matrix-wrap,.gc-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:auto;scrollbar-width:thin;scrollbar-color:var(--accent2) var(--soft)}
+/* the exclusion grid scrolls inside its own box (height refined in JS) so the
+   sticky policy header row and sticky first column stay on screen */
+.mwrap-x{max-height:calc(100vh - 260px);min-height:280px}
 .mwrap-x::-webkit-scrollbar,.matrix-wrap::-webkit-scrollbar,.gc-wrap::-webkit-scrollbar{height:12px;width:12px}
 .mwrap-x::-webkit-scrollbar-thumb,.matrix-wrap::-webkit-scrollbar-thumb,.gc-wrap::-webkit-scrollbar-thumb{background:var(--accent2);border-radius:6px}
 .mwrap-x::-webkit-scrollbar-track,.matrix-wrap::-webkit-scrollbar-track,.gc-wrap::-webkit-scrollbar-track{background:var(--soft);border-radius:6px}

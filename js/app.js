@@ -2099,8 +2099,18 @@
   // wraps to more rows on narrow screens, so measure it rather than guess.
   function syncExFocusTop() {
     const tb = $("exToolbar"); if (!tb) return;
-    const top = Fs.isOpen() ? 0 : 106 + Math.round(tb.getBoundingClientRect().height);
+    const fs = Fs.isOpen();
+    const top = fs ? 0 : 106 + Math.round(tb.getBoundingClientRect().height);
     document.documentElement.style.setProperty("--ex-focus-top", top + "px");
+    // Size the grid to the space left under the sticky chrome, so it scrolls
+    // inside its own box — that is what keeps the policy header row (and the
+    // exclusion column) pinned instead of scrolling off with the page.
+    const wrap = $("exBody").querySelector(".mwrap-x");
+    if (!wrap) return;
+    if (fs) { wrap.style.maxHeight = ""; return; }   // full screen: let it run long
+    const banner = $("exBody").querySelector(".ex-focus");
+    const chrome = top + (banner ? Math.round(banner.getBoundingClientRect().height) + 10 : 0);
+    wrap.style.maxHeight = Math.max(280, Math.round(window.innerHeight - chrome - 28)) + "px";
   }
   window.addEventListener("resize", syncExFocusTop);
   function renderExclusions() {
