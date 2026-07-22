@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=145">
+<link rel="stylesheet" href="css/app.css?v=146">
 </head>
 <body>
 
@@ -79,31 +79,31 @@
         <p>Select policies (or take all) and generate documentation — Word, PDF, PNG or a PNG bundle.</p>
       </div>
       <div class="tool" id="toolAnalyze">
-        <div class="tool-ic">🔍</div><h3>Gap analyse <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">🔍</div><h3>Gap analyse</h3>
         <p>Users × policies impact matrix: who bypasses what and why, risky exclusions, MFA gaps.</p>
       </div>
       <div class="tool" id="toolGapCheck">
-        <div class="tool-ic">🛡</div><h3>Best-practice &amp; bypass checks <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">🛡</div><h3>Best-practice &amp; bypass checks</h3>
         <p>Check the baseline against known CA bypasses and the Swiss-cheese model — MFA coverage, FOCI token sharing, break-glass coverage, known bypass apps, persona × control matrix.</p>
       </div>
       <div class="tool" id="toolValidator">
-        <div class="tool-ic">⚡</div><h3>CA validator <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">⚡</div><h3>CA validator</h3>
         <p>Per policy, the sign-in simulations it implies — user, app, client, location, platform, risk — and the control each one should (or should not) enforce. Ported from Jasper Baes' CA Validator.</p>
       </div>
       <div class="tool" id="toolExclusions">
-        <div class="tool-ic">🚪</div><h3>Exclusion analyzer <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">🚪</div><h3>Exclusion analyzer</h3>
         <p>Every exclusion across all policies — users, groups (expanded to members), roles, guest types, apps and locations — in an exclusion × policy matrix.</p>
       </div>
       <div class="tool" id="toolBaseline">
-        <div class="tool-ic">🧬</div><h3>Baseline Policies <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">🧬</div><h3>Baseline Policies</h3>
         <p>Match this tenant against the Limon-IT R26.6 (v3.x) baseline: which baseline policies are present, outdated or missing — then import the gap.</p>
       </div>
       <div class="tool" id="toolBaselineJoey">
-        <div class="tool-ic">🧩</div><h3>Baseline (Joey Verlinden) <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">🧩</div><h3>Baseline (Joey Verlinden)</h3>
         <p>Match this tenant against the community Conditional Access Baseline by Joey Verlinden (2026.6.1) — same view, different catalog.</p>
       </div>
       <div class="tool" id="toolMsLearn">
-        <div class="tool-ic">📘</div><h3>MS Learn checks <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">📘</div><h3>MS Learn checks</h3>
         <p>Check policies against documented Microsoft Learn exclusions &amp; limitations — break-glass, token protection, Teams Rooms, retirements.</p>
       </div>
       <div class="tool" id="toolJson">
@@ -111,7 +111,7 @@
         <p>Select policies (or take all) and download their raw JSON definitions in a zip.</p>
       </div>
       <div class="tool" id="toolCaGroups">
-        <div class="tool-ic">👥</div><h3>Conditional Access groups <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">👥</div><h3>Conditional Access groups</h3>
         <p>Check the baseline groups against this tenant, create the missing ones, analyze their members in a matrix, and assign them to policies. <span class="tag block">writes to tenant</span></p>
       </div>
       <div class="tool" id="toolState">
@@ -119,7 +119,7 @@
         <p>Switch selected policies between On, Report-only and Off. <span class="tag block">writes to tenant</span></p>
       </div>
       <div class="tool" id="toolImport">
-        <div class="tool-ic">📥</div><h3>Import <span class="tag new">BETA</span></h3>
+        <div class="tool-ic">📥</div><h3>Import</h3>
         <p>Restore a backup (zip or folder): dependencies first, policies imported Off, includes remapped to deploy persona groups. <span class="tag block">writes to tenant</span></p>
       </div>
       <div class="tool tool-help" id="toolHelp">
@@ -446,7 +446,8 @@
         <input id="vaSearch" placeholder="Search policy or simulation…" autocomplete="off">
       </div>
       <div class="va-target">
-        <input id="vaTarget" placeholder="Run against a user (UPN) or group name / ID… (optional)" autocomplete="off" spellcheck="false">
+        <input id="vaTarget" list="vaTargetList" placeholder="Run against a user (UPN) or group name / ID… (optional)" autocomplete="off" spellcheck="false">
+        <datalist id="vaTargetList"></datalist>
         <button class="btn sm" id="vaTargetGo">Run</button>
         <button class="btn sm" id="vaTargetClear" title="Clear target — simulate every policy" style="display:none">✕</button>
       </div>
@@ -499,7 +500,7 @@
     </section>
 
     <section class="help-sec">
-      <h4>🔍 Gap analyse <span class="tag new">BETA</span></h4>
+      <h4>🔍 Gap analyse</h4>
       <p>A users × policies impact matrix: who is in scope for what, who bypasses a policy and why.</p>
       <ul>
         <li><b>Group filters</b> — narrow the matrix columns to the policies that target chosen groups.</li>
@@ -510,7 +511,7 @@
     </section>
 
     <section class="help-sec">
-      <h4>🛡 Best-practice &amp; bypass checks <span class="tag new">BETA</span></h4>
+      <h4>🛡 Best-practice &amp; bypass checks</h4>
       <p>Checks the baseline against known Conditional Access bypasses and the Swiss-cheese model.</p>
       <ul>
         <li>MFA coverage, FOCI token-sharing, break-glass coverage, known bypass apps, and a <b>persona × control</b> coverage matrix.</li>
@@ -521,7 +522,7 @@
     </section>
 
     <section class="help-sec">
-      <h4>⚡ CA validator <span class="tag new">BETA</span></h4>
+      <h4>⚡ CA validator</h4>
       <p>For each enabled policy, the sign-in <b>simulations</b> it implies — the combinations of user, application, client app, location, device platform and risk it targets — and, per grant control, the control each one should enforce.</p>
       <ul>
         <li><b>Expected control</b> — every simulation shows the control the policy would require (MFA, Block, Compliant device, …). When the principal, app, location or platform is on the <b>excluded</b> side, the expectation inverts to <b>“no &lt;control&gt;”</b> — proving the policy does not fire there.</li>
@@ -534,7 +535,7 @@
     </section>
 
     <section class="help-sec">
-      <h4>🚪 Exclusion analyzer <span class="tag new">BETA</span></h4>
+      <h4>🚪 Exclusion analyzer</h4>
       <p>Every exclusion across all policies in one place.</p>
       <ul>
         <li><b>Matrix</b> (default) — exclusions × policies; <b>Effective users</b> — the same but expanded to the individual users a group exclusion covers.</li>
@@ -546,7 +547,7 @@
     </section>
 
     <section class="help-sec">
-      <h4>🧬 Baseline Policies — Limon-IT R26.6 <span class="tag new">BETA</span></h4>
+      <h4>🧬 Baseline Policies — Limon-IT R26.6</h4>
       <p>Matches this tenant against the Limon-IT baseline catalog and shows the gap.</p>
       <ul>
         <li><b>Status filters</b> — <b>Missing</b> (not in tenant), <b>Outdated</b> (older version present), <b>Up to date</b>, <b>Not in baseline</b> (in tenant but not the catalog).</li>
@@ -558,13 +559,13 @@
     </section>
 
     <section class="help-sec">
-      <h4>🧩 Baseline (Joey Verlinden) <span class="tag new">BETA</span></h4>
+      <h4>🧩 Baseline (Joey Verlinden)</h4>
       <p>The same comparison view against the community Conditional Access Baseline by Joey Verlinden — a different catalog, opens as Cards.</p>
       <p class="help-x">Read-only.</p>
     </section>
 
     <section class="help-sec">
-      <h4>📘 MS Learn checks <span class="tag new">BETA</span></h4>
+      <h4>📘 MS Learn checks</h4>
       <p>Checks policies against documented Microsoft Learn exclusions and limitations — break-glass, token protection, Teams Rooms, retired features.</p>
       <ul>
         <li><b>Findings</b> tab lists what conflicts with the docs; <b>Refresh</b> re-runs after you fix something.</li>
@@ -580,7 +581,7 @@
     </section>
 
     <section class="help-sec">
-      <h4>👥 Conditional Access groups <span class="tag new">BETA</span> <span class="tag block">writes to tenant</span></h4>
+      <h4>👥 Conditional Access groups <span class="tag block">writes to tenant</span></h4>
       <p>The group side of the baseline, in one tool.</p>
       <ul>
         <li><b>Check</b> — baseline groups vs this tenant: present, missing, or drifted. <b>Create</b> a single missing group per row (the TeamsSharedDevices group is created as a <b>dynamic</b> group with the Teams-Rooms membership rule). If a group should be role-assignable but isn’t (immutable after creation), <b>↻ Recreate role-assignable</b> renames the old one, creates a new one, re-points the referencing policies and writes a readme of where it was assigned.</li>
@@ -597,7 +598,7 @@
     </section>
 
     <section class="help-sec">
-      <h4>📥 Import <span class="tag new">BETA</span> <span class="tag block">writes to tenant</span></h4>
+      <h4>📥 Import <span class="tag block">writes to tenant</span></h4>
       <p>Restore a backup (zip or extracted folder). Dependencies are created first (create-if-missing), then the policies — always in state <b>Off</b> unless a replacement inherits an existing state.</p>
       <ul>
         <li><b>Assignment mode — 🚀 Deployment groups</b>: new policies are scoped to this tenant’s deploy persona groups (<code>CAD-SEC-U-DG-*</code>). Staged and safe — nothing already in the tenant is touched.</li>
@@ -718,7 +719,7 @@
 <!-- ============ IMPORT (BETA) ============ -->
 <div class="modal-bg" id="importModal">
   <div class="modal" style="max-width:680px">
-    <h3>Import backup <span class="tag new">BETA</span></h3>
+    <h3>Import backup</h3>
     <p class="mini" id="imDesc">Select a CA Doc backup zip, or pick the extracted backup folder — both use the same structure.</p>
     <div id="imPick" style="display:flex;gap:10px;flex-wrap:wrap;margin:10px 0">
       <label class="btn primary" style="cursor:pointer">Choose backup .zip<input type="file" id="imZip" accept=".zip" style="display:none"></label>
@@ -868,27 +869,27 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/version.js?v=145"></script>
-<script src="js/authConfig.js?v=145"></script>
-<script src="js/labels.js?v=145"></script>
-<script src="js/graph.js?v=145"></script>
-<script src="js/model.js?v=145"></script>
-<script src="js/render.js?v=145"></script>
-<script src="js/analyze.js?v=145"></script>
-<script src="js/whatif.js?v=145"></script>
-<script src="js/mslearn.js?v=145"></script>
-<script src="js/gapcheck.js?v=145"></script>
-<script src="js/exclusions.js?v=145"></script>
-<script src="js/validator.js?v=145"></script>
-<script src="js/baselineData.js?v=145"></script>
-<script src="js/baselineJoeyData.js?v=145"></script>
-<script src="js/baseline.js?v=145"></script>
-<script src="js/groupTemplates.js?v=145"></script>
-<script src="js/assign.js?v=145"></script>
-<script src="js/cagroups.js?v=145"></script>
-<script src="js/import.js?v=145"></script>
-<script src="js/export.js?v=145"></script>
-<script src="js/demo.js?v=145"></script>
-<script src="js/app.js?v=145"></script>
+<script src="js/version.js?v=146"></script>
+<script src="js/authConfig.js?v=146"></script>
+<script src="js/labels.js?v=146"></script>
+<script src="js/graph.js?v=146"></script>
+<script src="js/model.js?v=146"></script>
+<script src="js/render.js?v=146"></script>
+<script src="js/analyze.js?v=146"></script>
+<script src="js/whatif.js?v=146"></script>
+<script src="js/mslearn.js?v=146"></script>
+<script src="js/gapcheck.js?v=146"></script>
+<script src="js/exclusions.js?v=146"></script>
+<script src="js/validator.js?v=146"></script>
+<script src="js/baselineData.js?v=146"></script>
+<script src="js/baselineJoeyData.js?v=146"></script>
+<script src="js/baseline.js?v=146"></script>
+<script src="js/groupTemplates.js?v=146"></script>
+<script src="js/assign.js?v=146"></script>
+<script src="js/cagroups.js?v=146"></script>
+<script src="js/import.js?v=146"></script>
+<script src="js/export.js?v=146"></script>
+<script src="js/demo.js?v=146"></script>
+<script src="js/app.js?v=146"></script>
 </body>
 </html>

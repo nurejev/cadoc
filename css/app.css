@@ -505,6 +505,14 @@ tr.detail>td{background:var(--hover);padding:12px 18px}
 .va-c-tbl td{padding:3px 0;vertical-align:top}
 .va-c-k{color:var(--muted);width:110px;white-space:nowrap;padding-right:12px}
 .va-c-excl{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+/* baseline "what changed" column */
+.bl-chcell{vertical-align:top}
+.bl-ch{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.bl-chip{font-size:11px;line-height:1.5;padding:1px 8px;border-radius:999px;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid transparent}
+.bl-chip.add{background:var(--ok-bg2);color:var(--on);border-color:var(--on)}
+.bl-chip.del{background:var(--bad-bg2);color:var(--off);border-color:var(--off)}
+.bl-chip.chg{background:var(--warn-bg2);color:var(--report);border-color:var(--report)}
 .va-target{display:flex;align-items:center;gap:6px;flex:1;min-width:240px;flex-wrap:wrap}
 .va-target input{flex:1;min-width:180px;padding:7px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13px}
 .va-target input:focus{outline:none;border-color:var(--green)}

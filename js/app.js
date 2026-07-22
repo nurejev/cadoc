@@ -2576,6 +2576,42 @@
   }
   $("vaTargetGo").addEventListener("click", vaRunTarget);
   $("vaTarget").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); vaRunTarget(); } });
+  // Type-ahead: suggest matching groups and users as you type, so you don't
+  // have to know the exact name. Debounced, read-only, top 10 of each.
+  let vaSugTimer = null, vaSugLast = "";
+  const vaSugCache = new Map();
+  async function vaSuggest(text) {
+    const t = text.trim();
+    if (t.length < 2 || t === vaSugLast) return;
+    vaSugLast = t;
+    if (vaSugCache.has(t)) { $("vaTargetList").innerHTML = vaSugCache.get(t); return; }
+    let opts = [];
+    try {
+      if (isDemo) {
+        const dn = (typeof DEMO_DATA !== "undefined" && DEMO_DATA.names) || {};
+        opts = Object.values(dn).filter((n) => String(n).toLowerCase().includes(t.toLowerCase()))
+          .slice(0, 12).map((n) => ({ v: n, l: "demo object" }));
+      } else {
+        const f = t.replace(/'/g, "''");
+        const [groups, users] = await Promise.all([
+          Graph.gget(`/groups?$filter=startswith(displayName,'${f}')&$select=displayName&$top=10`).catch(() => null),
+          Graph.gget(`/users?$filter=startswith(displayName,'${f}') or startswith(userPrincipalName,'${f}')&$select=displayName,userPrincipalName&$top=10`).catch(() => null),
+        ]);
+        opts = [
+          ...((groups && groups.value) || []).map((g) => ({ v: g.displayName, l: "group" })),
+          ...((users && users.value) || []).map((u) => ({ v: u.userPrincipalName, l: `user · ${u.displayName || ""}`.trim() })),
+        ];
+      }
+    } catch (e) { console.warn("validator: suggest failed", e.message); return; }
+    const html = opts.map((o) => `<option value="${esc(o.v)}" label="${esc(o.l)}"></option>`).join("");
+    vaSugCache.set(t, html);
+    $("vaTargetList").innerHTML = html;
+  }
+  $("vaTarget").addEventListener("input", (e) => {
+    const v = e.target.value;
+    clearTimeout(vaSugTimer);
+    vaSugTimer = setTimeout(() => vaSuggest(v), 250);
+  });
   function vaClearTarget() { vaTargetObj = null; $("vaTarget").value = ""; runValidatorScan(); }
   $("vaTargetClear").addEventListener("click", vaClearTarget);
   $("vaHead").addEventListener("click", (e) => { if (e.target.closest("[data-vacleartarget]")) vaClearTarget(); });

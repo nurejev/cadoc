@@ -231,6 +231,35 @@ const Baseline = (() => {
     return items.map(([k, l]) => `<button class="fchip ${active === k ? "active" : ""}" data-blf="${k}">${esc(l)}</button>`).join("");
   }
 
+  // ---- what changed between the tenant's policy and the baseline version ----
+  // The catalog stores an assignment list and rendered control strings; the
+  // tenant side is the same view model the cards use, so assignments compare
+  // directly and the controls compare as normalised text.
+  const normTxt = (s) => String(s || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const setDiff = (a, b) => {   // in a, not in b (case-insensitive)
+    const B = new Set((b || []).map(normTxt));
+    return (a || []).filter((x) => !B.has(normTxt(x)));
+  };
+  function changes(r) {
+    if (!r.baseline || !r.tenant) return [];
+    const b = r.baseline, vm = r.tenant, out = [];
+    const bInc = b.include || [], bExc = b.exclude || [];
+    const tInc = (vm.users && vm.users.inc) || [], tExc = (vm.users && vm.users.exc) || [];
+    setDiff(bExc, tExc).forEach((x) => out.push({ k: "add", t: "exclude " + x }));
+    setDiff(tExc, bExc).forEach((x) => out.push({ k: "del", t: "exclude " + x }));
+    setDiff(bInc, tInc).forEach((x) => out.push({ k: "add", t: "include " + x }));
+    setDiff(tInc, bInc).forEach((x) => out.push({ k: "del", t: "include " + x }));
+    // grant / block
+    const bGrant = b.block ? "Block access" : (b.grant || "");
+    const tGrant = vm.grant && vm.grant.mode === "block" ? "Block access" : ((vm.grant && vm.grant.controls) || []).join(" + ");
+    if (normTxt(bGrant) !== normTxt(tGrant) && (bGrant || tGrant)) out.push({ k: "chg", t: `grant: ${tGrant || "—"} → ${bGrant || "—"}` });
+    // session controls
+    const bSess = b.session || "";
+    const tSess = ((vm.session) || []).map((s) => s.t).join(" · ");
+    if (normTxt(bSess) !== normTxt(tSess) && (bSess || tSess)) out.push({ k: "chg", t: `session: ${tSess || "none"} → ${bSess || "none"}` });
+    return out;
+  }
+
   function renderTable(res, filter, query, collapsed) {
     const q = (query || "").toLowerCase();
     const isCollapsed = (g) => collapsed && collapsed.has(g);
@@ -251,7 +280,7 @@ const Baseline = (() => {
       const g = personaOf(r.num, r.baseline);
       if (g !== lastGroup) {
         const n = perGroup.get(g), col = isCollapsed(g);
-        body += `<tr class="grouprow${col ? " collapsed" : ""}" data-blgroup="${esc(g)}"><td colspan="5">
+        body += `<tr class="grouprow${col ? " collapsed" : ""}" data-blgroup="${esc(g)}"><td colspan="6">
           <span class="caret">▶</span> <b>${esc(g)}</b>
           <span class="mini">${n} ${n === 1 ? "policy" : "policies"}${col ? " · click to expand" : ""}</span></td></tr>`;
         lastGroup = g;
@@ -269,16 +298,25 @@ const Baseline = (() => {
         : r.status === "missing" ? `<span class="mini">${esc(r.baseline.version || "—")}</span>`
         : r.status === "extra" ? `<span class="mini">${esc(r.tenantVersion || "—")}</span>`
         : `<span class="mini">${esc(r.tenantVersion || r.baseline?.version || "—")}</span>`;
+      const ch = changes(r);
+      const chCell = r.status === "missing" ? '<span class="mini muted">new policy</span>'
+        : r.status === "extra" ? '<span class="mini muted">not in baseline</span>'
+        : ch.length
+          ? `<div class="bl-ch">${ch.slice(0, 6).map((c) =>
+              `<span class="bl-chip ${c.k}" title="${esc(c.t)}">${c.k === "add" ? "+" : c.k === "del" ? "−" : "~"} ${esc(c.t)}</span>`).join("")}
+             ${ch.length > 6 ? `<span class="mini muted">+${ch.length - 6} more</span>` : ""}</div>`
+          : '<span class="mini muted">no assignment or control change</span>';
       body += `<tr>
         <td class="bl-st"><span class="bl-badge ${s.cls}" title="${esc(s.label)}">${s.icon}</span></td>
         <td><b>CA${String(r.num).padStart(3, "0")}</b></td>
         <td>${esc(bName)} ${tag}<div class="mini">${esc(r.baseline ? `${r.baseline.resources} · ${r.baseline.grant}` : "")}</div></td>
         <td>${tenant}</td>
         <td>${ver}</td>
+        <td class="bl-chcell">${chCell}</td>
       </tr>`;
     }
     return `<div class="list-card"><table class="plist bl-table">
-      <thead><tr><th style="width:44px"></th><th style="width:78px">CA</th><th>Baseline policy (${esc(BASELINE.release)})</th><th>In this tenant</th><th style="width:150px">Version</th></tr></thead>
+      <thead><tr><th style="width:44px"></th><th style="width:78px">CA</th><th>Baseline policy (${esc(BASELINE.release)})</th><th>In this tenant</th><th style="width:150px">Version</th><th style="width:280px">Changes</th></tr></thead>
       <tbody>${body}</tbody></table></div>`;
   }
 
@@ -411,5 +449,5 @@ const Baseline = (() => {
     return L.join("\n");
   }
 
-  return { catalogs, catalog, compare, personas, personaKey, similarity, mismatchReason, renderSummary, chips, renderTable, renderCards, toMd, STATUS, caNum, version, cmpVersion };
+  return { catalogs, catalog, compare, personas, personaKey, similarity, mismatchReason, renderSummary, chips, renderTable, renderCards, changes, toMd, STATUS, caNum, version, cmpVersion };
 })();
