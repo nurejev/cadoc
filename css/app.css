@@ -108,7 +108,7 @@ main{max-width:1180px;margin:0 auto;padding:28px 24px 80px}
 .seg{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}
 .seg button{border:0;background:none;padding:8px 16px;font-weight:600;font-size:13px;color:var(--muted)}
 .seg button.active{background:var(--green);color:#fff}
-.chip-filter{display:flex;gap:6px}
+.chip-filter{display:flex;gap:6px;flex-wrap:wrap}
 .fchip{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--muted)}
 .fchip.active{background:var(--soft);color:var(--green);border-color:var(--accent2)}
 
@@ -496,11 +496,23 @@ tr.detail>td{background:var(--hover);padding:12px 18px}
 .va-table tbody tr:hover td{background:var(--hover)}
 .va-yes{font-weight:700;color:var(--green)}
 .va-no{font-weight:700;color:var(--off)}
-.va-target{display:flex;align-items:center;gap:6px}
-.va-target input{min-width:280px;padding:7px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13px}
+.va-target{display:flex;align-items:center;gap:6px;flex:1;min-width:240px;flex-wrap:wrap}
+.va-target input{flex:1;min-width:180px;padding:7px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13px}
 .va-target input:focus{outline:none;border-color:var(--green)}
 .va-targetbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:8px 12px;background:var(--soft);border:1px solid var(--border);border-radius:var(--radius);font-size:13px}
 .va-targetbar .fchip{margin-left:auto}
+.va-tablewrap{-webkit-overflow-scrolling:touch}
+/* idle "run scan" prompt for the exclusion / gap / validator tools */
+.run-prompt{display:flex;flex-direction:column;align-items:center;gap:10px;padding:44px 20px;text-align:center}
+.run-prompt .btn.primary{font-size:15px;padding:10px 22px}
+.run-prompt .mini{max-width:420px}
+/* close-all-tabs button in the tab bar */
+.toolnav-btn.closeall{color:var(--off)}
+@media(max-width:640px){
+  .va-target{width:100%}
+  .va-target input{min-width:0}
+  .toolnav-inner{justify-content:flex-start}
+}
 .help-sec p{margin:0 0 8px}
 .help-sec ul{margin:0 0 8px;padding-left:20px}
 .help-sec li{margin:4px 0}

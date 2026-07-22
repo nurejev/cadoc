@@ -710,8 +710,9 @@
     ["toolCaGroups", "👥 Conditional Access groups"],
     ["toolState", "🎚 Set Policy state"],
     ["toolImport", "📥 Import"],
-    ["toolHelp", "❓ Help"],
   ];
+  // Help is a tool too, but always sits last (after the + in the tab bar).
+  TOOL_TABS.push(["toolHelp", "❓ Help"]);
   // Browser-style tabs: a tab exists only for a tool you have opened. Home shows
   // no tabs; opening a tool (from the grid or the + menu) adds one; the + opens
   // another. openTabs is the ordered set of open tool ids.
@@ -728,9 +729,11 @@
       </span>`).join("");
     const add = `<button class="toolnav-btn add" data-navadd title="Open a tool in a new tab">＋</button>`;
     const help = `<button class="toolnav-btn help" data-navhelp title="How each tool works">❓ Help</button>`;
+    // "close all" appears only when there's more than one tab to close at once
+    const closeAll = openTabs.length > 1 ? `<button class="toolnav-btn closeall" data-navcloseall title="Close all tabs">✕ all</button>` : "";
     // Centred inner strip aligned to the card width; tabs grow out from the
     // middle to left and right as more open ("opening a curtain").
-    $("toolNav").innerHTML = `<div class="toolnav-inner">${home}${tabs}${add}${help}</div>`;
+    $("toolNav").innerHTML = `<div class="toolnav-inner">${home}${tabs}${add}${closeAll}${help}</div>`;
     // the bar only appears once a tool is open (empty at the tools home)
     $("toolNav").style.display = openTabs.length ? "block" : "none";
   }
@@ -768,6 +771,7 @@
 
   $("toolNav").addEventListener("click", (e) => {
     if (e.target.closest("[data-navhelp]")) { openHelp(); return; }
+    if (e.target.closest("[data-navcloseall]")) { openTabs = []; activeTab = null; renderTabs(); crumb(""); show("screen-home"); return; }
     if (e.target.closest("[data-navhome]")) { crumb(""); show("screen-home"); return; }
     if (e.target.closest("[data-navadd]")) { openAddMenu(e.target.closest("[data-navadd]")); return; }
     const x = e.target.closest("[data-close]"); if (x) { e.stopPropagation(); closeTab(x.dataset.close); return; }
@@ -2041,9 +2045,27 @@
   let exModel = null, exUsers = [], exTab = "matrix", exKind = "all", exQuery = "", exPage = 0;
   let exFocusRow = null, exFocusCol = null;  // pinned exclusion/user row and/or policy column
   const EX_PAGE = 50;
-  async function openExclusions() {
+  // Opening the tool does NOT rescan — the scan (which expands group membership
+  // over Graph) runs only when the user asks, and the result is cached so
+  // switching tabs and coming back keeps the screen intact.
+  function openExclusions() {
     show("screen-exclusions");
+    $("exRescan").style.display = exModel ? "" : "none";
     if (!policies.length) { $("exHead").innerHTML = '<p class="mini">No policies loaded.</p>'; $("exBody").innerHTML = ""; $("exChips").innerHTML = ""; return; }
+    if (exModel) {   // cached — restore the previous screen, no rescan
+      $("exSearch").value = exQuery;
+      $("exTabMatrix").classList.toggle("active", exTab === "matrix");
+      $("exTabUsers").classList.toggle("active", exTab === "users");
+      renderExclusions();
+      return;
+    }
+    // idle — wait for the user to start the scan
+    $("exHead").innerHTML = '<h3>🚪 CA Exclusion analyzer</h3><p class="mini" style="margin:6px 0 0">Every exclusion across all policies — users, groups (expanded to their members), roles, guest types, apps and locations.</p>';
+    $("exChips").innerHTML = ""; $("exPager").style.display = "none"; $("exHint").style.display = "none";
+    $("exBody").innerHTML = '<div class="run-prompt"><button class="btn primary" data-exrun>▶ Run exclusion scan</button><p class="mini muted">Expands group memberships via Microsoft Graph. The result stays until you rescan.</p></div>';
+  }
+  async function runExclusionScan() {
+    $("exRescan").style.display = "";
     $("exHead").innerHTML = '<h3>🚪 CA Exclusion analyzer</h3><p class="mini" style="margin:6px 0 0">Collecting exclusions…</p>';
     $("exChips").innerHTML = ""; $("exBody").innerHTML = ""; $("exPager").style.display = "none";
     exTab = "matrix"; exKind = "all"; exQuery = ""; exPage = 0; exFocusRow = null; exFocusCol = null; Fs.close(); $("exSearch").value = "";
@@ -2056,9 +2078,11 @@
       renderExclusions();
     } catch (e) {
       console.error("Exclusion analyzer failed:", e);
+      exModel = null;
       $("exHead").innerHTML = `<h3>🚪 CA Exclusion analyzer</h3><p class="mini" style="color:var(--off)">Failed: ${esc(e.message || e)}</p>`;
     }
   }
+  $("exRescan").addEventListener("click", runExclusionScan);
   function renderExclusions() {
     if (!exModel) return;
     $("exHead").innerHTML = Exclusions.renderSummary(Exclusions.summary(exModel, exUsers));
@@ -2099,6 +2123,7 @@
   // policy columns); a policy header pins the policy (hides out-of-scope rows).
   // Clicking the same target again, or the Clear button, releases the pin.
   $("exBody").addEventListener("click", (e) => {
+    if (e.target.closest("[data-exrun]")) { runExclusionScan(); return; }
     if (e.target.closest("[data-exclearfocus]")) { exFocusRow = null; exFocusCol = null; exPage = 0; renderExclusions(); return; }
     if (e.target.closest("[data-colgrip]")) return;  // don't pin while resizing the first column
     const col = e.target.closest("[data-expol]");
@@ -2308,10 +2333,22 @@
     return names;
   }
 
-  async function openValidator() {
+  function openValidator() {
     crumb("⚡ CA validator");
     show("screen-validator");
     if (!policies.length) { $("vaHead").innerHTML = '<p class="mini">No policies loaded.</p>'; $("vaBody").innerHTML = ""; $("vaChips").innerHTML = ""; return; }
+    if (vaResult) {   // cached — restore the previous screen, no re-generate
+      $("vaReportOnly").checked = vaReportOnly;
+      $("vaTargetClear").style.display = vaTargetObj ? "" : "none";
+      $("vaSearch").value = vaQuery;
+      renderValidator();
+      return;
+    }
+    runValidatorScan();
+  }
+  async function runValidatorScan() {
+    show("screen-validator");
+    if (!policies.length) return;
     $("vaHead").innerHTML = '<h3>⚡ CA validator</h3><p class="mini" style="margin:6px 0 0">Generating simulations…</p>';
     $("vaChips").innerHTML = ""; $("vaBody").innerHTML = ""; vaFilter = "all"; vaQuery = ""; $("vaSearch").value = ""; vaCollapsed.clear();
     $("vaReportOnly").checked = vaReportOnly;
@@ -2469,8 +2506,8 @@
     $("vaExpand").textContent = allOpen ? "⊞ Expand all" : "⊟ Collapse all";
     renderValidator();
   });
-  $("vaReportOnly").addEventListener("change", (e) => { vaReportOnly = e.target.checked; openValidator(); });
-  $("vaRefresh").addEventListener("click", async () => { if (!isDemo) await loadFromGraph(true); openValidator(); });
+  $("vaReportOnly").addEventListener("change", (e) => { vaReportOnly = e.target.checked; runValidatorScan(); });
+  $("vaRefresh").addEventListener("click", async () => { if (!isDemo) await loadFromGraph(true); runValidatorScan(); });
   $("vaMd").addEventListener("click", () => { if (!vaResult) return; showReport("⚡ CA validation report", "CA-Validation", vaMarkdown()); });
   // Target: run the simulation against one persona group or user
   async function vaRunTarget() {
@@ -2480,13 +2517,13 @@
     try {
       vaTargetObj = await resolveValidatorTarget(text);
       $("vaTarget").value = vaTargetObj.upn || vaTargetObj.name;
-      openValidator();
+      runValidatorScan();
     } catch (e) { toast(`Target: <span>${esc(e.message || e)}</span>`); }
     finally { $("vaTargetGo").disabled = false; $("vaTargetGo").textContent = "Run"; }
   }
   $("vaTargetGo").addEventListener("click", vaRunTarget);
   $("vaTarget").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); vaRunTarget(); } });
-  function vaClearTarget() { vaTargetObj = null; $("vaTarget").value = ""; openValidator(); }
+  function vaClearTarget() { vaTargetObj = null; $("vaTarget").value = ""; runValidatorScan(); }
   $("vaTargetClear").addEventListener("click", vaClearTarget);
   $("vaHead").addEventListener("click", (e) => { if (e.target.closest("[data-vacleartarget]")) vaClearTarget(); });
 
@@ -2898,9 +2935,18 @@
   // ---------- gap analysis (best-practice & bypass checks) ----------
   let gcResult = null, gcFilter = "all", gcCtx = null, gcMeta = null;
   const gcExpanded = new Set();
-  async function openGapCheck() {
+  function openGapCheck() {
     show("screen-gapcheck");
     if (!policies.length) { $("gcHead").innerHTML = '<p class="mini">No policies loaded.</p>'; $("gcMatrix").innerHTML = ""; $("gcChips").innerHTML = ""; $("gcBody").innerHTML = ""; return; }
+    if (gcResult) { renderGapCheck(); return; }   // cached — keep the previous screen
+    // idle — wait for the user to start the checks
+    $("gcHead").innerHTML = '<h3>🛡 Best-practice &amp; bypass checks</h3><p class="mini" style="margin:6px 0 0">Check the baseline against known Conditional Access bypasses and the Swiss-cheese model — MFA coverage, break-glass, known bypass apps, and a persona × control matrix.</p>';
+    $("gcMatrix").innerHTML = ""; $("gcChips").innerHTML = "";
+    $("gcBody").innerHTML = '<div class="run-prompt"><button class="btn primary" data-gcrun>▶ Run checks</button><p class="mini muted">Reads authentication strengths and named locations via Microsoft Graph. Results stay until you refresh.</p></div>';
+  }
+  async function runGapCheckScan() {
+    show("screen-gapcheck");
+    if (!policies.length) return;
     $("gcHead").innerHTML = '<h3>🛡 Best-practice &amp; bypass checks</h3><p class="mini" style="margin:6px 0 0">Running checks…</p>';
     $("gcMatrix").innerHTML = ""; $("gcChips").innerHTML = ""; $("gcBody").innerHTML = "";
     // baseline tenant → include Off + persona-only; note the scope
@@ -2948,7 +2994,7 @@
     try {
       if (isDemo) loadDemo(); else await loadFromGraph(true);
       gcCtx = null;
-      await openGapCheck();
+      await runGapCheckScan();
       toast("Best-practice &amp; bypass checks <span>refreshed</span>");
     } catch (e) {
       toast(`Refresh failed: <span>${esc(e.message || e)}</span>`);
@@ -2978,6 +3024,7 @@
     gcFilter = b.dataset.gcf; renderGapCheck();
   });
   $("gcBody").addEventListener("click", (e) => {
+    if (e.target.closest("[data-gcrun]")) { runGapCheckScan(); return; }
     const pl = e.target.closest(".pol-link");
     if (pl) { showDetail(pl.dataset.polid); return; }
     const t = e.target.closest("[data-gctoggle]"); if (!t) return;

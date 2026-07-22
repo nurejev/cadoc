@@ -10,7 +10,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; frame-src https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Conditional Access Baseline Tools · Limon-IT</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="css/app.css?v=143">
+<link rel="stylesheet" href="css/app.css?v=144">
 </head>
 <body>
 
@@ -70,10 +70,6 @@
   <section id="screen-home" class="screen">
     <h2 class="home-title">What do you want to do?</h2>
     <div class="tools">
-      <div class="tool tool-help" id="toolHelp">
-        <div class="tool-ic">❓</div><h3>Help</h3>
-        <p>How every tool works and what to expect from each option — opens in its own tab, jump back to any tool anytime.</p>
-      </div>
       <div class="tool" id="toolPolicies">
         <div class="tool-ic">🗂</div><h3>List Policies</h3>
         <p>Browse all Conditional Access policies as cards, a list or a settings matrix — grouped by persona.</p>
@@ -125,6 +121,10 @@
       <div class="tool" id="toolImport">
         <div class="tool-ic">📥</div><h3>Import <span class="tag new">BETA</span></h3>
         <p>Restore a backup (zip or folder): dependencies first, policies imported Off, includes remapped to deploy persona groups. <span class="tag block">writes to tenant</span></p>
+      </div>
+      <div class="tool tool-help" id="toolHelp">
+        <div class="tool-ic">❓</div><h3>Help</h3>
+        <p>How every tool works and what to expect from each option — opens in its own tab, jump back to any tool anytime.</p>
       </div>
     </div>
 
@@ -342,6 +342,7 @@
         <button id="exTabUsers">Effective users</button>
       </div>
       <div class="tb-actions">
+        <button class="btn" id="exRescan" title="Re-scan exclusions from the tenant">⟳ Rescan</button>
         <button class="btn" id="exExpand" title="Open the matrix full screen">⤢ Full screen</button>
         <button class="btn" id="exMd">Export MD</button>
         <button class="btn lemon" id="exCsv">Export CSV</button>
@@ -863,27 +864,27 @@
 <script src="vendor/html-to-image.js"></script>
 <script src="vendor/jspdf.umd.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
-<script src="js/version.js?v=143"></script>
-<script src="js/authConfig.js?v=143"></script>
-<script src="js/labels.js?v=143"></script>
-<script src="js/graph.js?v=143"></script>
-<script src="js/model.js?v=143"></script>
-<script src="js/render.js?v=143"></script>
-<script src="js/analyze.js?v=143"></script>
-<script src="js/whatif.js?v=143"></script>
-<script src="js/mslearn.js?v=143"></script>
-<script src="js/gapcheck.js?v=143"></script>
-<script src="js/exclusions.js?v=143"></script>
-<script src="js/validator.js?v=143"></script>
-<script src="js/baselineData.js?v=143"></script>
-<script src="js/baselineJoeyData.js?v=143"></script>
-<script src="js/baseline.js?v=143"></script>
-<script src="js/groupTemplates.js?v=143"></script>
-<script src="js/assign.js?v=143"></script>
-<script src="js/cagroups.js?v=143"></script>
-<script src="js/import.js?v=143"></script>
-<script src="js/export.js?v=143"></script>
-<script src="js/demo.js?v=143"></script>
-<script src="js/app.js?v=143"></script>
+<script src="js/version.js?v=144"></script>
+<script src="js/authConfig.js?v=144"></script>
+<script src="js/labels.js?v=144"></script>
+<script src="js/graph.js?v=144"></script>
+<script src="js/model.js?v=144"></script>
+<script src="js/render.js?v=144"></script>
+<script src="js/analyze.js?v=144"></script>
+<script src="js/whatif.js?v=144"></script>
+<script src="js/mslearn.js?v=144"></script>
+<script src="js/gapcheck.js?v=144"></script>
+<script src="js/exclusions.js?v=144"></script>
+<script src="js/validator.js?v=144"></script>
+<script src="js/baselineData.js?v=144"></script>
+<script src="js/baselineJoeyData.js?v=144"></script>
+<script src="js/baseline.js?v=144"></script>
+<script src="js/groupTemplates.js?v=144"></script>
+<script src="js/assign.js?v=144"></script>
+<script src="js/cagroups.js?v=144"></script>
+<script src="js/import.js?v=144"></script>
+<script src="js/export.js?v=144"></script>
+<script src="js/demo.js?v=144"></script>
+<script src="js/app.js?v=144"></script>
 </body>
 </html>
